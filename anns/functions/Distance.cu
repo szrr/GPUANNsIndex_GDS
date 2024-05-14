@@ -1,56 +1,86 @@
+#include <cuda_runtime.h>
 #include <iostream>
-#include <cublas_v2.h>
+#include <iomanip>
+#include <cmath> 
 
-void computeSquaredNorms(cublasHandle_t handle, const float* matrix, int rows, int cols, float* norms) {
-    float alpha = 1.0f, beta = 0.0f;
-    cublasSgemv(handle, CUBLAS_OP_T, cols, rows, &alpha, matrix, cols, matrix, 1, &beta, norms, 1);
-}
-
-void computeDotProduct(cublasHandle_t handle, const float* x, const float* y, int size, float* result) {
-    float alpha = 1.0f, beta = 0.0f;
-    cublasSdot(handle, size, x, 1, y, 1, result);
-}
-
-void computeDistances(cublasHandle_t handle, const float* X, const float* Y, int m, int n, int k) {
-    float* normsX = new float[m];
-    float* normsY = new float[n];
-    float* distances = new float[m * n];
-
-    computeSquaredNorms(handle, X, m, k, normsX);
-    computeSquaredNorms(handle, Y, n, k, normsY);
-
-    float alpha = -2.0f, beta = 1.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T, m, n, k, &alpha, X, k, Y, k, &beta, distances, m);
-
-    for (int i = 0; i < m; ++i) {
-        for (int j = 0; j < n; ++j) {
-            float dist = normsX[i] + normsY[j] + distances[i * n + j];
-            std::cout << "Distance between X" << i << " and Y" << j << ": " << dist << std::endl;
+void printMatrix(const float* mat, int rows, int cols, const std::string& name) {
+    std::cout << "Matrix " << name << ":\n";
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            std::cout << std::fixed << std::setw(8) << std::setprecision(2) << mat[i * cols + j] << " ";
         }
+        std::cout << "\n";
     }
+    std::cout << "\n";
+}
 
-    delete[] normsX;
-    delete[] normsY;
-    delete[] distances;
+__global__ void computeDistancesKernel(float* X, float* Y, float* D, int m, int n, int k) {
+    // Each thread computes one element of the distance matrix D
+    int idx = blockIdx.x * blockDim.x + threadIdx.x; // Row index in X
+    int idy = blockIdx.y * blockDim.y + threadIdx.y; // Column index in Y
+
+    if (idx < m && idy < n) {
+        float sum = 0.0f;
+        // Compute dot product
+        for (int i = 0; i < k; i++) {
+            sum += X[idx * k + i] * Y[idy * k + i];
+        }
+        // Compute the distance squared
+        float normX = 0.0f, normY = 0.0f;
+        for (int i = 0; i < k; i++) {
+            normX += X[idx * k + i] * X[idx * k + i];
+            normY += Y[idy * k + i] * Y[idy * k + i];
+        }
+        D[idx * n + idy] = normX + normY - 2 * sum;
+    }
+}
+
+void computeDistances(float* X, float* Y, float* D, int m, int n, int k) {
+    float *dX, *dY, *dD;
+    size_t sizeX = m * k * sizeof(float);
+    size_t sizeY = n * k * sizeof(float);
+    size_t sizeD = m * n * sizeof(float);
+
+    cudaMalloc(&dX, sizeX);
+    cudaMalloc(&dY, sizeY);
+    cudaMalloc(&dD, sizeD);
+
+    cudaMemcpy(dX, X, sizeX, cudaMemcpyHostToDevice);
+    cudaMemcpy(dY, Y, sizeY, cudaMemcpyHostToDevice);
+
+    dim3 blockSize(16, 16); // Choose reasonable block sizes
+    dim3 gridSize((m + blockSize.x - 1) / blockSize.x, (n + blockSize.y - 1) / blockSize.y);
+
+    computeDistancesKernel<<<gridSize, blockSize>>>(dX, dY, dD, m, n, k);
+
+    cudaMemcpy(D, dD, sizeD, cudaMemcpyDeviceToHost);
+
+    cudaFree(dX);
+    cudaFree(dY);
+    cudaFree(dD);
 }
 
 int main() {
-    const int m = 3; // Number of rows in X
-    const int n = 2; // Number of rows in Y
-    const int k = 4; // Dimension of vectors
+    const int m = 1024, n = 1024, k = 128; // Example sizes
+    float *X = new float[m * k];
+    float *Y = new float[n * k];
+    float *D = new float[m * n];
 
-    float X[m * k] = {1.0, 2.0, 3.0, 4.0,
-                      5.0, 6.0, 7.0, 8.0,
-                      9.0, 10.0, 11.0, 12.0};
+    // Initialize X and Y with random data for demonstration purposes
+    for (int i = 0; i < m * k; i++) X[i] = static_cast<float>(1);
+    for (int i = 0; i < n * k; i++) Y[i] = static_cast<float>(0);
 
-    float Y[n * k] = {1.0, 2.0, 3.0, 4.0,
-                      5.0, 6.0, 7.0, 8.0};
+    computeDistances(X, Y, D, m, n, k);
 
-    cublasHandle_t handle;
-    cublasCreate(&handle);
+    // Print X, Y, and D matrices
+    printMatrix(X, m, k, "X");
+    printMatrix(Y, n, k, "Y");
+    printMatrix(D, m, n, "Distance Squared");
 
-    computeDistances(handle, X, Y, m, n, k);
+    // Free memory
+    delete[] X;
+    delete[] Y;
+    delete[] D;
 
-    cublasDestroy(handle);
     return 0;
 }
