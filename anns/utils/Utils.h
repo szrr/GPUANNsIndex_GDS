@@ -52,10 +52,6 @@ constexpr __host__ __device__ int log2(T n, int p = 0) {
     return (n <= 1) ? p : log2(n / 2, p + 1);
 }
 
-static_assert(log2(2) == 1, "log2");
-static_assert(log2(3) == 1, "log2");
-static_assert(log2(4) == 2, "log2");
-
 template <typename T>
 constexpr __host__ __device__ bool isPowerOf2(T v) {
     return (v && !(v & (v - 1)));

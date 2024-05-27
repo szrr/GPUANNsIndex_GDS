@@ -328,30 +328,31 @@ void printMatrix(const char* name, const float* matrix, int rows, int cols) {
     }
 }
 
-int main() {
-    // Number of rows (vectors) and dimensions
-    const int query_num = 1024;
-    const int base_num = 1024;
-    const int dim = 128;
+// int main() {
+//     // Number of rows (vectors) and dimensions
+//     const int query_num = 10000;
+//     const int base_num = 1024;
+//     const int dim = 128;
 
-    // Define and initialize the query and base data
-    float *query_data = new float[query_num * dim];
-    float *base_data = new float[base_num * dim];
+//     // Define and initialize the query and base data
+//     float *query_data = new float[query_num * dim];
+//     float *base_data = new float[base_num * dim];
 
-    for (int i = 0; i < query_num * dim; i++) query_data[i] = static_cast<float>(1);
-    for (int i = 0; i < base_num * dim; i++) base_data[i] = static_cast<float>(0);
+//     for (int i = 0; i < query_num * dim; i++) query_data[i] = static_cast<float>(1);
+//     for (int i = 0; i < base_num * dim; i++) base_data[i] = static_cast<float>(0);
 
-    // Prepare a matrix to store the results
-    float* dis_matrix = new float[query_num * base_num];
+//     // Prepare a matrix to store the results
+//     float* dis_matrix = new float[query_num * base_num];
 
-    // Call the function under test
-    QueryToBaseDistance(base_data, base_num, query_data, query_num, dim, dis_matrix, 1);
+//     // Call the function under test
+//     int chunk = std::min(base_num, 1000000);
+//     QueryToBaseDistance(base_data, base_num, query_data, query_num, dim, dis_matrix, chunk);
 
-    // Print the results
-    printMatrix("Distance Matrix", dis_matrix, query_num, base_num);
+//     // Print the results
+//     // printMatrix("Distance Matrix", dis_matrix, query_num, base_num);
 
-    // Cleanup
-    delete[] dis_matrix;
+//     // Cleanup
+//     delete[] dis_matrix;
 
-    return 0;
-}
+//     return 0;
+// }
