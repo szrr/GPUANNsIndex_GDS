@@ -253,6 +253,7 @@ void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
     // chunks
     printf("Base data chunk size = %d\n", ChunkSize);
     num_t chunks = (base_num + ChunkSize - 1) / ChunkSize;
+    printf("Chunks = %d\n", chunks);
     for (num_t chunk = 0; chunk < chunks; chunk++) {
         printf("Start %d iteration...\n", chunk);
         size_t base_start = chunk * ChunkSize;

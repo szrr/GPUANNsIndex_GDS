@@ -8,6 +8,16 @@
 #pragma once
 
 template <typename T>
+struct ConvertTo {};
+
+template <>
+struct ConvertTo<float> {
+    static inline __device__ float to(float v) {
+        return v;
+    }
+};
+
+template <typename T>
 struct Math {
     typedef T ScalarType;
 

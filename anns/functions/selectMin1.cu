@@ -45,22 +45,22 @@ std::vector<int> findMinIndicesCUDA(const float* values, int c, int num) {
     return minIndices;
 }
 
-int main() {
-    // 示例数据
-    std::vector<float> values = {1.2, 2.4, 3.1, 0.5, 2.0, 1.8, 3.5, 4.2, 0.9, 2.3, 235, 2.4};
+// int main() {
+//     // 示例数据
+//     std::vector<float> values = {1.2, 2.4, 3.1, 0.5, 2.0, 1.8, 3.5, 4.2, 0.9, 2.3, 235, 2.4};
 
-    // 每段的大小和段数
-    int c = 3;
-    int num = 4;
+//     // 每段的大小和段数
+//     int c = 3;
+//     int num = 4;
 
-    // 使用CUDA加速查找每段中的最小值索引
-    std::vector<int> minIndices = findMinIndicesCUDA(values.data(), c, num);
+//     // 使用CUDA加速查找每段中的最小值索引
+//     std::vector<int> minIndices = findMinIndicesCUDA(values.data(), c, num);
 
-    // 打印结果
-    std::cout << "Minimum indices in each segment:" << std::endl;
-    for (int i = 0; i < num; ++i) {
-        std::cout << "Segment " << i << ": " << minIndices[i] << std::endl;
-    }
+//     // 打印结果
+//     std::cout << "Minimum indices in each segment:" << std::endl;
+//     for (int i = 0; i < num; ++i) {
+//         std::cout << "Segment " << i << ": " << minIndices[i] << std::endl;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

@@ -2,15 +2,23 @@
 
 #include "../common.h"
 
+#ifndef __host__
+#define __host__
+#endif
+
+#ifndef __device__
+#define __device__
+#endif
+
+#ifndef __global__
+#define __global__
+#endif
+
 // 声明 QueryToBaseDistance 函数
 void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
                          num_t query_num, num_t dim, val_t *dis_matrix,
-                         const num_t ChunkSize = 100000);
+                         const num_t ChunkSize);
 
-
-void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
-                         num_t query_num, num_t dim, val_t *dis_matrix,
-                         const num_t ChunkSize = 100000);
 
 struct DevicePair {
     val_t val;

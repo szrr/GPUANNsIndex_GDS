@@ -10,10 +10,14 @@
 #include <cmath>
 #include <limits>
 #include <cblas.h>
+#include <random>
+// #include </usr/include/mkl/mkl_cblas.h>
+// #include </usr/include/mkl/mkl.h>
+// #include </usr/include/mkl/mkl_service.h>
 #include "RVQ.h"
 #include "common.h"
-#include "anns/functions/distance_kernel.cuh"
-#include "anns/functions/selectMin1.cuh"
+#include "functions/distance_kernel.cuh"
+#include "functions/selectMin1.cuh"
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign) {
     float error = 0.0;
@@ -160,7 +164,7 @@ void RVQ::train(float* trainVectorData, int numTrainVectors) {
 
 // 构建反向索引
 void RVQ::build(float* buildVectorData, num_t numVectors) {
-    std::cout << "Building fine quantization codebook with " << numVectors << " vectors." << std::endl;
+    std::cout << "Building index with " << numVectors << " build vectors." << std::endl;
     // Todo: 距离计算没有分块，可能放不下
     // Todo: fuse (distance + 1-selection) 放入一个kernel?
 
@@ -190,11 +194,14 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
     // 加入反向列表
     for(idx_t i = 0; i < numVectors; ++i){
         index[minCoarseIndices[i]][minFineIndices[i]].push_back(i);
+        if (i < 100) {
+            printf("%d : coarseId=%d, fineId=%d\n", i, minCoarseIndices[i], minFineIndices[i]);
+        }
     }
 }
 
 // 查询搜索
-void RVQ::search(float* query, int numQueries, std::vector<std::pair<int, int>> res) {
+void RVQ::search(float* query, int numQueries, std::vector<std::pair<int, int>>& res) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
     // Todo: search()
     // 找到两层最近邻 过程参考Tinker 计算参考Faiss
@@ -225,6 +232,56 @@ void RVQ::search(float* query, int numQueries, std::vector<std::pair<int, int>> 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
     for(idx_t i = 0; i < numQueries; ++i){
         res.push_back(std::make_pair(minCoarseIndices[i], minFineIndices[i]));
+        printf("%d : coarseId=%d, fineId=%d\n", i, minCoarseIndices[i], minFineIndices[i]);
     }
 }
 
+// Function to fill an array with random values
+void fillWithRandom(float* data, int size) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(0.0, 1.0);
+    for (int i = 0; i < size; ++i) {
+        data[i] = dis(gen);
+    }
+}
+
+int main() {
+    // Define parameters
+    int dim = 128; // Dimension of feature vectors
+    int numCoarseCentroids = 100; // Number of coarse centroids
+    int numFineCentroids = 100; // Number of fine centroids
+    int numTrainVectors = 1000; // Number of training vectors
+    int numQueries = 100; // Number of query vectors
+
+    // Generate random training data and query data
+    float* trainData = new float[numTrainVectors * dim];
+    float* queryData = new float[numQueries * dim];
+    fillWithRandom(trainData, numTrainVectors * dim);
+    fillWithRandom(queryData, numQueries * dim);
+
+    // Create RVQ object
+    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+
+    // Train RVQ
+    rvq.train(trainData, numTrainVectors);
+
+    // Build reverse index
+    rvq.build(trainData, numTrainVectors);
+
+    // Search using queries
+    std::vector<std::pair<int, int>> results;
+    rvq.search(queryData, numQueries, results);
+
+    // Display search results
+    std::cout << "Search results:" << std::endl;
+    for (int i = 0; i < numQueries; ++i) {
+        std::cout << "Query " << i << ": Coarse index = " << results[i].first << ", Fine index = " << results[i].second << std::endl;
+    }
+
+    // Clean up
+    delete[] trainData;
+    delete[] queryData;
+
+    return 0;
+}
