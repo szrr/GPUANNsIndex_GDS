@@ -1,0 +1,934 @@
+RVQ index created.
+Dimensions = 128, Coarse Centroids = 100, Fine Centroids = 100
+Training input : 100000 vectors.
+Number of select training vectors : 100000
+[Info] RVQ training iteration 0
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 16350061568.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 10133340160.00 < minErr = 16350061568.00, update minErr
+Training iteration 2. error = 10108387328.00 < minErr = 10133340160.00, update minErr
+Training iteration 3. error = 10096950272.00 < minErr = 10108387328.00, update minErr
+Training iteration 4. error = 10089668608.00 < minErr = 10096950272.00, update minErr
+Training iteration 5. error = 10084379648.00 < minErr = 10089668608.00, update minErr
+Training iteration 6. error = 10080362496.00 < minErr = 10084379648.00, update minErr
+Training iteration 7. error = 10077172736.00 < minErr = 10080362496.00, update minErr
+Training iteration 8. error = 10074646528.00 < minErr = 10077172736.00, update minErr
+Training iteration 9. error = 10072488960.00 < minErr = 10074646528.00, update minErr
+Training iteration 10. error = 10070816768.00 < minErr = 10072488960.00, update minErr
+Training iteration 11. error = 10069241856.00 < minErr = 10070816768.00, update minErr
+Training iteration 12. error = 10067963904.00 < minErr = 10069241856.00, update minErr
+Training iteration 13. error = 10066716672.00 < minErr = 10067963904.00, update minErr
+Training iteration 14. error = 10065780736.00 < minErr = 10066716672.00, update minErr
+Training iteration 15. error = 10064861184.00 < minErr = 10065780736.00, update minErr
+Training iteration 16. error = 10064143360.00 < minErr = 10064861184.00, update minErr
+Training iteration 17. error = 10063371264.00 < minErr = 10064143360.00, update minErr
+Training iteration 18. error = 10062774272.00 < minErr = 10063371264.00, update minErr
+Training iteration 19. error = 10062100480.00 < minErr = 10062774272.00, update minErr
+Training iteration 20. error = 10061466624.00 < minErr = 10062100480.00, update minErr
+Training iteration 21. error = 10060894208.00 < minErr = 10061466624.00, update minErr
+Training iteration 22. error = 10060528640.00 < minErr = 10060894208.00, update minErr
+Training iteration 23. error = 10059956224.00 < minErr = 10060528640.00, update minErr
+Training iteration 24. error = 10059625472.00 < minErr = 10059956224.00, update minErr
+[Info] Finish Kmeans training
+The0 deviation error of coarse clusters is 1.00596e+10
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13582619648.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9591981056.00 < minErr = 13582619648.00, update minErr
+Training iteration 2. error = 9559652352.00 < minErr = 9591981056.00, update minErr
+Training iteration 3. error = 9542612992.00 < minErr = 9559652352.00, update minErr
+Training iteration 4. error = 9530979328.00 < minErr = 9542612992.00, update minErr
+Training iteration 5. error = 9522808832.00 < minErr = 9530979328.00, update minErr
+Training iteration 6. error = 9516548096.00 < minErr = 9522808832.00, update minErr
+Training iteration 7. error = 9511658496.00 < minErr = 9516548096.00, update minErr
+Training iteration 8. error = 9507727360.00 < minErr = 9511658496.00, update minErr
+Training iteration 9. error = 9504465920.00 < minErr = 9507727360.00, update minErr
+Training iteration 10. error = 9501749248.00 < minErr = 9504465920.00, update minErr
+Training iteration 11. error = 9499441152.00 < minErr = 9501749248.00, update minErr
+Training iteration 12. error = 9497606144.00 < minErr = 9499441152.00, update minErr
+Training iteration 13. error = 9495910400.00 < minErr = 9497606144.00, update minErr
+Training iteration 14. error = 9494455296.00 < minErr = 9495910400.00, update minErr
+Training iteration 15. error = 9493134336.00 < minErr = 9494455296.00, update minErr
+Training iteration 16. error = 9491984384.00 < minErr = 9493134336.00, update minErr
+Training iteration 17. error = 9491118080.00 < minErr = 9491984384.00, update minErr
+Training iteration 18. error = 9490288640.00 < minErr = 9491118080.00, update minErr
+Training iteration 19. error = 9489371136.00 < minErr = 9490288640.00, update minErr
+Training iteration 20. error = 9488561152.00 < minErr = 9489371136.00, update minErr
+Training iteration 21. error = 9487998976.00 < minErr = 9488561152.00, update minErr
+Training iteration 22. error = 9487385600.00 < minErr = 9487998976.00, update minErr
+Training iteration 23. error = 9486744576.00 < minErr = 9487385600.00, update minErr
+Training iteration 24. error = 9486245888.00 < minErr = 9486744576.00, update minErr
+[Info] Finish Kmeans training
+The 0 deviation error of fine clusters is 9.48625e+09
+
+[Info] RVQ training iteration 1
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14164222976.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9554997248.00 < minErr = 14164222976.00, update minErr
+Training iteration 2. error = 9520280576.00 < minErr = 9554997248.00, update minErr
+Training iteration 3. error = 9503374336.00 < minErr = 9520280576.00, update minErr
+Training iteration 4. error = 9493603328.00 < minErr = 9503374336.00, update minErr
+Training iteration 5. error = 9487565824.00 < minErr = 9493603328.00, update minErr
+Training iteration 6. error = 9483857920.00 < minErr = 9487565824.00, update minErr
+Training iteration 7. error = 9481590784.00 < minErr = 9483857920.00, update minErr
+Training iteration 8. error = 9480027136.00 < minErr = 9481590784.00, update minErr
+Training iteration 9. error = 9478975488.00 < minErr = 9480027136.00, update minErr
+Training iteration 10. error = 9478299648.00 < minErr = 9478975488.00, update minErr
+Training iteration 11. error = 9477810176.00 < minErr = 9478299648.00, update minErr
+Training iteration 12. error = 9477442560.00 < minErr = 9477810176.00, update minErr
+Training iteration 13. error = 9477072896.00 < minErr = 9477442560.00, update minErr
+Training iteration 14. error = 9476812800.00 < minErr = 9477072896.00, update minErr
+Training iteration 15. error = 9476555776.00 < minErr = 9476812800.00, update minErr
+Training iteration 16. error = 9476334592.00 < minErr = 9476555776.00, update minErr
+Training iteration 17. error = 9476330496.00 < minErr = 9476334592.00, update minErr
+Training iteration 18. error = 9476216832.00 < minErr = 9476330496.00, update minErr
+Training iteration 19. error = 9476122624.00 < minErr = 9476216832.00, update minErr
+Training iteration 20. error = 9476038656.00 < minErr = 9476122624.00, update minErr
+Training iteration 21. error = 9475989504.00 < minErr = 9476038656.00, update minErr
+Training iteration 22. error = 9475911680.00 < minErr = 9475989504.00, update minErr
+Training iteration 23. error = 9475889152.00 < minErr = 9475911680.00, update minErr
+Training iteration 24. error = 9475852288.00 < minErr = 9475889152.00, update minErr
+[Info] Finish Kmeans training
+The1 deviation error of coarse clusters is 9.47585e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13619253248.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9589246976.00 < minErr = 13619253248.00, update minErr
+Training iteration 2. error = 9554186240.00 < minErr = 9589246976.00, update minErr
+Training iteration 3. error = 9534407680.00 < minErr = 9554186240.00, update minErr
+Training iteration 4. error = 9520470016.00 < minErr = 9534407680.00, update minErr
+Training iteration 5. error = 9509939200.00 < minErr = 9520470016.00, update minErr
+Training iteration 6. error = 9502017536.00 < minErr = 9509939200.00, update minErr
+Training iteration 7. error = 9496078336.00 < minErr = 9502017536.00, update minErr
+Training iteration 8. error = 9491527680.00 < minErr = 9496078336.00, update minErr
+Training iteration 9. error = 9488154624.00 < minErr = 9491527680.00, update minErr
+Training iteration 10. error = 9485413376.00 < minErr = 9488154624.00, update minErr
+Training iteration 11. error = 9483281408.00 < minErr = 9485413376.00, update minErr
+Training iteration 12. error = 9481402368.00 < minErr = 9483281408.00, update minErr
+Training iteration 13. error = 9479996416.00 < minErr = 9481402368.00, update minErr
+Training iteration 14. error = 9478901760.00 < minErr = 9479996416.00, update minErr
+Training iteration 15. error = 9477808128.00 < minErr = 9478901760.00, update minErr
+Training iteration 16. error = 9477091328.00 < minErr = 9477808128.00, update minErr
+Training iteration 17. error = 9476413440.00 < minErr = 9477091328.00, update minErr
+Training iteration 18. error = 9475844096.00 < minErr = 9476413440.00, update minErr
+Training iteration 19. error = 9475385344.00 < minErr = 9475844096.00, update minErr
+Training iteration 20. error = 9475054592.00 < minErr = 9475385344.00, update minErr
+Training iteration 21. error = 9474721792.00 < minErr = 9475054592.00, update minErr
+Training iteration 22. error = 9474458624.00 < minErr = 9474721792.00, update minErr
+Training iteration 23. error = 9474150400.00 < minErr = 9474458624.00, update minErr
+Training iteration 24. error = 9473893376.00 < minErr = 9474150400.00, update minErr
+[Info] Finish Kmeans training
+The 1 deviation error of fine clusters is 9.47389e+09
+
+[Info] RVQ training iteration 2
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14158914560.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9551875072.00 < minErr = 14158914560.00, update minErr
+Training iteration 2. error = 9515912192.00 < minErr = 9551875072.00, update minErr
+Training iteration 3. error = 9498252288.00 < minErr = 9515912192.00, update minErr
+Training iteration 4. error = 9487966208.00 < minErr = 9498252288.00, update minErr
+Training iteration 5. error = 9481516032.00 < minErr = 9487966208.00, update minErr
+Training iteration 6. error = 9477316608.00 < minErr = 9481516032.00, update minErr
+Training iteration 7. error = 9474616320.00 < minErr = 9477316608.00, update minErr
+Training iteration 8. error = 9472933888.00 < minErr = 9474616320.00, update minErr
+Training iteration 9. error = 9471779840.00 < minErr = 9472933888.00, update minErr
+Training iteration 10. error = 9471166464.00 < minErr = 9471779840.00, update minErr
+Training iteration 11. error = 9470699520.00 < minErr = 9471166464.00, update minErr
+Training iteration 12. error = 9470328832.00 < minErr = 9470699520.00, update minErr
+Training iteration 13. error = 9470016512.00 < minErr = 9470328832.00, update minErr
+Training iteration 14. error = 9469832192.00 < minErr = 9470016512.00, update minErr
+Training iteration 15. error = 9469696000.00 < minErr = 9469832192.00, update minErr
+Training iteration 16. error = 9469594624.00 < minErr = 9469696000.00, update minErr
+Training iteration 17. error = 9469422592.00 < minErr = 9469594624.00, update minErr
+Training iteration 18. error = 9469332480.00 < minErr = 9469422592.00, update minErr
+Training iteration 19. error = 9469282304.00 < minErr = 9469332480.00, update minErr
+Training iteration 20. error = 9469233152.00 < minErr = 9469282304.00, update minErr
+Training iteration 21. error = 9469191168.00 < minErr = 9469233152.00, update minErr
+Training iteration 22. error = 9469117440.00 < minErr = 9469191168.00, update minErr
+Training iteration 23. error = 9469090816.00 < minErr = 9469117440.00, update minErr
+Training iteration 24. error = 9469068288.00 < minErr = 9469090816.00, update minErr
+[Info] Finish Kmeans training
+The2 deviation error of coarse clusters is 9.46907e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13652986880.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9586753536.00 < minErr = 13652986880.00, update minErr
+Training iteration 2. error = 9551004672.00 < minErr = 9586753536.00, update minErr
+Training iteration 3. error = 9530340352.00 < minErr = 9551004672.00, update minErr
+Training iteration 4. error = 9515913216.00 < minErr = 9530340352.00, update minErr
+Training iteration 5. error = 9505122304.00 < minErr = 9515913216.00, update minErr
+Training iteration 6. error = 9496999936.00 < minErr = 9505122304.00, update minErr
+Training iteration 7. error = 9490761728.00 < minErr = 9496999936.00, update minErr
+Training iteration 8. error = 9485824000.00 < minErr = 9490761728.00, update minErr
+Training iteration 9. error = 9482109952.00 < minErr = 9485824000.00, update minErr
+Training iteration 10. error = 9479172096.00 < minErr = 9482109952.00, update minErr
+Training iteration 11. error = 9476815872.00 < minErr = 9479172096.00, update minErr
+Training iteration 12. error = 9474940928.00 < minErr = 9476815872.00, update minErr
+Training iteration 13. error = 9473419264.00 < minErr = 9474940928.00, update minErr
+Training iteration 14. error = 9472197632.00 < minErr = 9473419264.00, update minErr
+Training iteration 15. error = 9471309824.00 < minErr = 9472197632.00, update minErr
+Training iteration 16. error = 9470527488.00 < minErr = 9471309824.00, update minErr
+Training iteration 17. error = 9469931520.00 < minErr = 9470527488.00, update minErr
+Training iteration 18. error = 9469441024.00 < minErr = 9469931520.00, update minErr
+Training iteration 19. error = 9468986368.00 < minErr = 9469441024.00, update minErr
+Training iteration 20. error = 9468685312.00 < minErr = 9468986368.00, update minErr
+Training iteration 21. error = 9468489728.00 < minErr = 9468685312.00, update minErr
+Training iteration 22. error = 9468303360.00 < minErr = 9468489728.00, update minErr
+Training iteration 23. error = 9468064768.00 < minErr = 9468303360.00, update minErr
+Training iteration 24. error = 9467964416.00 < minErr = 9468064768.00, update minErr
+[Info] Finish Kmeans training
+The 2 deviation error of fine clusters is 9.46796e+09
+
+[Info] RVQ training iteration 3
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14168289280.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9550550016.00 < minErr = 14168289280.00, update minErr
+Training iteration 2. error = 9514264576.00 < minErr = 9550550016.00, update minErr
+Training iteration 3. error = 9496046592.00 < minErr = 9514264576.00, update minErr
+Training iteration 4. error = 9485285376.00 < minErr = 9496046592.00, update minErr
+Training iteration 5. error = 9478402048.00 < minErr = 9485285376.00, update minErr
+Training iteration 6. error = 9473916928.00 < minErr = 9478402048.00, update minErr
+Training iteration 7. error = 9471000576.00 < minErr = 9473916928.00, update minErr
+Training iteration 8. error = 9469177856.00 < minErr = 9471000576.00, update minErr
+Training iteration 9. error = 9467933696.00 < minErr = 9469177856.00, update minErr
+Training iteration 10. error = 9467005952.00 < minErr = 9467933696.00, update minErr
+Training iteration 11. error = 9466429440.00 < minErr = 9467005952.00, update minErr
+Training iteration 12. error = 9466100736.00 < minErr = 9466429440.00, update minErr
+Training iteration 13. error = 9465807872.00 < minErr = 9466100736.00, update minErr
+Training iteration 14. error = 9465733120.00 < minErr = 9465807872.00, update minErr
+Training iteration 15. error = 9465584640.00 < minErr = 9465733120.00, update minErr
+Training iteration 16. error = 9465447424.00 < minErr = 9465584640.00, update minErr
+Training iteration 17. error = 9465382912.00 < minErr = 9465447424.00, update minErr
+Training iteration 18. error = 9465303040.00 < minErr = 9465382912.00, update minErr
+Training iteration 19. error = 9465247744.00 < minErr = 9465303040.00, update minErr
+Training iteration 20. error = 9465171968.00 < minErr = 9465247744.00, update minErr
+Training iteration 21. error = 9465127936.00 < minErr = 9465171968.00, update minErr
+Training iteration 22. error = 9465075712.00 < minErr = 9465127936.00, update minErr
+Training iteration 23. Training iteration 24. error = 9465060352.00 < minErr = 9465075712.00, update minErr
+[Info] Finish Kmeans training
+The3 deviation error of coarse clusters is 9.46506e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13671254016.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9585332224.00 < minErr = 13671254016.00, update minErr
+Training iteration 2. error = 9549216768.00 < minErr = 9585332224.00, update minErr
+Training iteration 3. error = 9528212480.00 < minErr = 9549216768.00, update minErr
+Training iteration 4. error = 9513498624.00 < minErr = 9528212480.00, update minErr
+Training iteration 5. error = 9502576640.00 < minErr = 9513498624.00, update minErr
+Training iteration 6. error = 9494168576.00 < minErr = 9502576640.00, update minErr
+Training iteration 7. error = 9487793152.00 < minErr = 9494168576.00, update minErr
+Training iteration 8. error = 9482854400.00 < minErr = 9487793152.00, update minErr
+Training iteration 9. error = 9478932480.00 < minErr = 9482854400.00, update minErr
+Training iteration 10. error = 9475986432.00 < minErr = 9478932480.00, update minErr
+Training iteration 11. error = 9473638400.00 < minErr = 9475986432.00, update minErr
+Training iteration 12. error = 9471753216.00 < minErr = 9473638400.00, update minErr
+Training iteration 13. error = 9470241792.00 < minErr = 9471753216.00, update minErr
+Training iteration 14. error = 9469000704.00 < minErr = 9470241792.00, update minErr
+Training iteration 15. error = 9468128256.00 < minErr = 9469000704.00, update minErr
+Training iteration 16. error = 9467318272.00 < minErr = 9468128256.00, update minErr
+Training iteration 17. error = 9466769408.00 < minErr = 9467318272.00, update minErr
+Training iteration 18. error = 9466276864.00 < minErr = 9466769408.00, update minErr
+Training iteration 19. error = 9465744384.00 < minErr = 9466276864.00, update minErr
+Training iteration 20. error = 9465362432.00 < minErr = 9465744384.00, update minErr
+Training iteration 21. error = 9465022464.00 < minErr = 9465362432.00, update minErr
+Training iteration 22. error = 9464847360.00 < minErr = 9465022464.00, update minErr
+Training iteration 23. error = 9464574976.00 < minErr = 9464847360.00, update minErr
+Training iteration 24. error = 9464398848.00 < minErr = 9464574976.00, update minErr
+[Info] Finish Kmeans training
+The 3 deviation error of fine clusters is 9.4644e+09
+
+[Info] RVQ training iteration 4
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14170778624.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9549647872.00 < minErr = 14170778624.00, update minErr
+Training iteration 2. error = 9513089024.00 < minErr = 9549647872.00, update minErr
+Training iteration 3. error = 9494878208.00 < minErr = 9513089024.00, update minErr
+Training iteration 4. error = 9483731968.00 < minErr = 9494878208.00, update minErr
+Training iteration 5. error = 9476525056.00 < minErr = 9483731968.00, update minErr
+Training iteration 6. error = 9471779840.00 < minErr = 9476525056.00, update minErr
+Training iteration 7. error = 9468497920.00 < minErr = 9471779840.00, update minErr
+Training iteration 8. error = 9466494976.00 < minErr = 9468497920.00, update minErr
+Training iteration 9. error = 9465185280.00 < minErr = 9466494976.00, update minErr
+Training iteration 10. error = 9464246272.00 < minErr = 9465185280.00, update minErr
+Training iteration 11. error = 9463655424.00 < minErr = 9464246272.00, update minErr
+Training iteration 12. error = 9463282688.00 < minErr = 9463655424.00, update minErr
+Training iteration 13. error = 9463030784.00 < minErr = 9463282688.00, update minErr
+Training iteration 14. error = 9462845440.00 < minErr = 9463030784.00, update minErr
+Training iteration 15. error = 9462739968.00 < minErr = 9462845440.00, update minErr
+Training iteration 16. error = 9462592512.00 < minErr = 9462739968.00, update minErr
+Training iteration 17. error = 9462468608.00 < minErr = 9462592512.00, update minErr
+Training iteration 18. error = 9462414336.00 < minErr = 9462468608.00, update minErr
+Training iteration 19. error = 9462350848.00 < minErr = 9462414336.00, update minErr
+Training iteration 20. error = 9462321152.00 < minErr = 9462350848.00, update minErr
+Training iteration 21. error = 9462281216.00 < minErr = 9462321152.00, update minErr
+Training iteration 22. error = 9462255616.00 < minErr = 9462281216.00, update minErr
+Training iteration 23. Training iteration 24. error = 9462199296.00 < minErr = 9462255616.00, update minErr
+[Info] Finish Kmeans training
+The4 deviation error of coarse clusters is 9.4622e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13689288704.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9584306176.00 < minErr = 13689288704.00, update minErr
+Training iteration 2. error = 9548426240.00 < minErr = 9584306176.00, update minErr
+Training iteration 3. error = 9527444480.00 < minErr = 9548426240.00, update minErr
+Training iteration 4. error = 9512437760.00 < minErr = 9527444480.00, update minErr
+Training iteration 5. error = 9501208576.00 < minErr = 9512437760.00, update minErr
+Training iteration 6. error = 9492832256.00 < minErr = 9501208576.00, update minErr
+Training iteration 7. error = 9486336000.00 < minErr = 9492832256.00, update minErr
+Training iteration 8. error = 9481044992.00 < minErr = 9486336000.00, update minErr
+Training iteration 9. error = 9476882432.00 < minErr = 9481044992.00, update minErr
+Training iteration 10. error = 9473572864.00 < minErr = 9476882432.00, update minErr
+Training iteration 11. error = 9470969856.00 < minErr = 9473572864.00, update minErr
+Training iteration 12. error = 9469143040.00 < minErr = 9470969856.00, update minErr
+Training iteration 13. error = 9467618304.00 < minErr = 9469143040.00, update minErr
+Training iteration 14. error = 9466491904.00 < minErr = 9467618304.00, update minErr
+Training iteration 15. error = 9465580544.00 < minErr = 9466491904.00, update minErr
+Training iteration 16. error = 9464928256.00 < minErr = 9465580544.00, update minErr
+Training iteration 17. error = 9464301568.00 < minErr = 9464928256.00, update minErr
+Training iteration 18. error = 9463792640.00 < minErr = 9464301568.00, update minErr
+Training iteration 19. error = 9463384064.00 < minErr = 9463792640.00, update minErr
+Training iteration 20. error = 9463132160.00 < minErr = 9463384064.00, update minErr
+Training iteration 21. error = 9462795264.00 < minErr = 9463132160.00, update minErr
+Training iteration 22. error = 9462577152.00 < minErr = 9462795264.00, update minErr
+Training iteration 23. error = 9462407168.00 < minErr = 9462577152.00, update minErr
+Training iteration 24. error = 9462252544.00 < minErr = 9462407168.00, update minErr
+[Info] Finish Kmeans training
+The 4 deviation error of fine clusters is 9.46225e+09
+
+[Info] RVQ training iteration 5
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14177742848.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9548794880.00 < minErr = 14177742848.00, update minErr
+Training iteration 2. error = 9512071168.00 < minErr = 9548794880.00, update minErr
+Training iteration 3. error = 9493561344.00 < minErr = 9512071168.00, update minErr
+Training iteration 4. error = 9482042368.00 < minErr = 9493561344.00, update minErr
+Training iteration 5. error = 9474450432.00 < minErr = 9482042368.00, update minErr
+Training iteration 6. error = 9469618176.00 < minErr = 9474450432.00, update minErr
+Training iteration 7. error = 9466441728.00 < minErr = 9469618176.00, update minErr
+Training iteration 8. error = 9464364032.00 < minErr = 9466441728.00, update minErr
+Training iteration 9. error = 9463118848.00 < minErr = 9464364032.00, update minErr
+Training iteration 10. error = 9462266880.00 < minErr = 9463118848.00, update minErr
+Training iteration 11. error = 9461699584.00 < minErr = 9462266880.00, update minErr
+Training iteration 12. error = 9461283840.00 < minErr = 9461699584.00, update minErr
+Training iteration 13. error = 9461039104.00 < minErr = 9461283840.00, update minErr
+Training iteration 14. error = 9460791296.00 < minErr = 9461039104.00, update minErr
+Training iteration 15. error = 9460631552.00 < minErr = 9460791296.00, update minErr
+Training iteration 16. error = 9460549632.00 < minErr = 9460631552.00, update minErr
+Training iteration 17. error = 9460429824.00 < minErr = 9460549632.00, update minErr
+Training iteration 18. error = 9460342784.00 < minErr = 9460429824.00, update minErr
+Training iteration 19. error = 9460339712.00 < minErr = 9460342784.00, update minErr
+Training iteration 20. error = 9460288512.00 < minErr = 9460339712.00, update minErr
+Training iteration 21. error = 9460253696.00 < minErr = 9460288512.00, update minErr
+Training iteration 22. error = 9460217856.00 < minErr = 9460253696.00, update minErr
+Training iteration 23. error = 9460155392.00 < minErr = 9460217856.00, update minErr
+Training iteration 24. [Info] Finish Kmeans training
+The5 deviation error of coarse clusters is 9.46016e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13700431872.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9583959040.00 < minErr = 13700431872.00, update minErr
+Training iteration 2. error = 9548114944.00 < minErr = 9583959040.00, update minErr
+Training iteration 3. error = 9527063552.00 < minErr = 9548114944.00, update minErr
+Training iteration 4. error = 9511965696.00 < minErr = 9527063552.00, update minErr
+Training iteration 5. error = 9500773376.00 < minErr = 9511965696.00, update minErr
+Training iteration 6. error = 9492045824.00 < minErr = 9500773376.00, update minErr
+Training iteration 7. error = 9485049856.00 < minErr = 9492045824.00, update minErr
+Training iteration 8. error = 9479642112.00 < minErr = 9485049856.00, update minErr
+Training iteration 9. error = 9475218432.00 < minErr = 9479642112.00, update minErr
+Training iteration 10. error = 9471776768.00 < minErr = 9475218432.00, update minErr
+Training iteration 11. error = 9469064192.00 < minErr = 9471776768.00, update minErr
+Training iteration 12. error = 9467004928.00 < minErr = 9469064192.00, update minErr
+Training iteration 13. error = 9465443328.00 < minErr = 9467004928.00, update minErr
+Training iteration 14. error = 9464122368.00 < minErr = 9465443328.00, update minErr
+Training iteration 15. error = 9463264256.00 < minErr = 9464122368.00, update minErr
+Training iteration 16. error = 9462431744.00 < minErr = 9463264256.00, update minErr
+Training iteration 17. error = 9461940224.00 < minErr = 9462431744.00, update minErr
+Training iteration 18. error = 9461518336.00 < minErr = 9461940224.00, update minErr
+Training iteration 19. error = 9461148672.00 < minErr = 9461518336.00, update minErr
+Training iteration 20. error = 9460791296.00 < minErr = 9461148672.00, update minErr
+Training iteration 21. error = 9460558848.00 < minErr = 9460791296.00, update minErr
+Training iteration 22. error = 9460374528.00 < minErr = 9460558848.00, update minErr
+Training iteration 23. error = 9460179968.00 < minErr = 9460374528.00, update minErr
+Training iteration 24. error = 9460031488.00 < minErr = 9460179968.00, update minErr
+[Info] Finish Kmeans training
+The 5 deviation error of fine clusters is 9.46003e+09
+
+[Info] RVQ training iteration 6
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14180695040.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9548487680.00 < minErr = 14180695040.00, update minErr
+Training iteration 2. error = 9511961600.00 < minErr = 9548487680.00, update minErr
+Training iteration 3. error = 9493013504.00 < minErr = 9511961600.00, update minErr
+Training iteration 4. error = 9481046016.00 < minErr = 9493013504.00, update minErr
+Training iteration 5. error = 9473310720.00 < minErr = 9481046016.00, update minErr
+Training iteration 6. error = 9468221440.00 < minErr = 9473310720.00, update minErr
+Training iteration 7. error = 9464947712.00 < minErr = 9468221440.00, update minErr
+Training iteration 8. error = 9462880256.00 < minErr = 9464947712.00, update minErr
+Training iteration 9. error = 9461432320.00 < minErr = 9462880256.00, update minErr
+Training iteration 10. error = 9460566016.00 < minErr = 9461432320.00, update minErr
+Training iteration 11. error = 9459976192.00 < minErr = 9460566016.00, update minErr
+Training iteration 12. error = 9459569664.00 < minErr = 9459976192.00, update minErr
+Training iteration 13. error = 9459315712.00 < minErr = 9459569664.00, update minErr
+Training iteration 14. error = 9459081216.00 < minErr = 9459315712.00, update minErr
+Training iteration 15. error = 9458973696.00 < minErr = 9459081216.00, update minErr
+Training iteration 16. error = 9458892800.00 < minErr = 9458973696.00, update minErr
+Training iteration 17. error = 9458806784.00 < minErr = 9458892800.00, update minErr
+Training iteration 18. error = 9458778112.00 < minErr = 9458806784.00, update minErr
+Training iteration 19. error = 9458756608.00 < minErr = 9458778112.00, update minErr
+Training iteration 20. error = 9458690048.00 < minErr = 9458756608.00, update minErr
+Training iteration 21. error = 9458678784.00 < minErr = 9458690048.00, update minErr
+Training iteration 22. error = 9458628608.00 < minErr = 9458678784.00, update minErr
+Training iteration 23. Training iteration 24. [Info] Finish Kmeans training
+The6 deviation error of coarse clusters is 9.45863e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13707208704.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9583281152.00 < minErr = 13707208704.00, update minErr
+Training iteration 2. error = 9547327488.00 < minErr = 9583281152.00, update minErr
+Training iteration 3. error = 9526344704.00 < minErr = 9547327488.00, update minErr
+Training iteration 4. error = 9511351296.00 < minErr = 9526344704.00, update minErr
+Training iteration 5. error = 9499913216.00 < minErr = 9511351296.00, update minErr
+Training iteration 6. error = 9491161088.00 < minErr = 9499913216.00, update minErr
+Training iteration 7. error = 9484171264.00 < minErr = 9491161088.00, update minErr
+Training iteration 8. error = 9478643712.00 < minErr = 9484171264.00, update minErr
+Training iteration 9. error = 9474051072.00 < minErr = 9478643712.00, update minErr
+Training iteration 10. error = 9470424064.00 < minErr = 9474051072.00, update minErr
+Training iteration 11. error = 9467611136.00 < minErr = 9470424064.00, update minErr
+Training iteration 12. error = 9465324544.00 < minErr = 9467611136.00, update minErr
+Training iteration 13. error = 9463676928.00 < minErr = 9465324544.00, update minErr
+Training iteration 14. error = 9462405120.00 < minErr = 9463676928.00, update minErr
+Training iteration 15. error = 9461401600.00 < minErr = 9462405120.00, update minErr
+Training iteration 16. error = 9460623360.00 < minErr = 9461401600.00, update minErr
+Training iteration 17. error = 9460046848.00 < minErr = 9460623360.00, update minErr
+Training iteration 18. error = 9459608576.00 < minErr = 9460046848.00, update minErr
+Training iteration 19. error = 9459314688.00 < minErr = 9459608576.00, update minErr
+Training iteration 20. error = 9458998272.00 < minErr = 9459314688.00, update minErr
+Training iteration 21. error = 9458757632.00 < minErr = 9458998272.00, update minErr
+Training iteration 22. error = 9458596864.00 < minErr = 9458757632.00, update minErr
+Training iteration 23. error = 9458437120.00 < minErr = 9458596864.00, update minErr
+Training iteration 24. error = 9458318336.00 < minErr = 9458437120.00, update minErr
+[Info] Finish Kmeans training
+The 6 deviation error of fine clusters is 9.45832e+09
+
+[Info] RVQ training iteration 7
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14185283584.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9548284928.00 < minErr = 14185283584.00, update minErr
+Training iteration 2. error = 9511208960.00 < minErr = 9548284928.00, update minErr
+Training iteration 3. error = 9491989504.00 < minErr = 9511208960.00, update minErr
+Training iteration 4. error = 9480089600.00 < minErr = 9491989504.00, update minErr
+Training iteration 5. error = 9472159744.00 < minErr = 9480089600.00, update minErr
+Training iteration 6. error = 9467051008.00 < minErr = 9472159744.00, update minErr
+Training iteration 7. error = 9463710720.00 < minErr = 9467051008.00, update minErr
+Training iteration 8. error = 9461528576.00 < minErr = 9463710720.00, update minErr
+Training iteration 9. error = 9460098048.00 < minErr = 9461528576.00, update minErr
+Training iteration 10. error = 9459125248.00 < minErr = 9460098048.00, update minErr
+Training iteration 11. error = 9458579456.00 < minErr = 9459125248.00, update minErr
+Training iteration 12. error = 9458174976.00 < minErr = 9458579456.00, update minErr
+Training iteration 13. error = 9457902592.00 < minErr = 9458174976.00, update minErr
+Training iteration 14. error = 9457696768.00 < minErr = 9457902592.00, update minErr
+Training iteration 15. error = 9457615872.00 < minErr = 9457696768.00, update minErr
+Training iteration 16. error = 9457526784.00 < minErr = 9457615872.00, update minErr
+Training iteration 17. error = 9457456128.00 < minErr = 9457526784.00, update minErr
+Training iteration 18. error = 9457406976.00 < minErr = 9457456128.00, update minErr
+Training iteration 19. error = 9457357824.00 < minErr = 9457406976.00, update minErr
+Training iteration 20. error = 9457308672.00 < minErr = 9457357824.00, update minErr
+Training iteration 21. error = 9457256448.00 < minErr = 9457308672.00, update minErr
+Training iteration 22. error = 9457249280.00 < minErr = 9457256448.00, update minErr
+Training iteration 23. error = 9457242112.00 < minErr = 9457249280.00, update minErr
+Training iteration 24. error = 9457227776.00 < minErr = 9457242112.00, update minErr
+[Info] Finish Kmeans training
+The7 deviation error of coarse clusters is 9.45723e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13717586944.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9582644224.00 < minErr = 13717586944.00, update minErr
+Training iteration 2. error = 9546903552.00 < minErr = 9582644224.00, update minErr
+Training iteration 3. error = 9526061056.00 < minErr = 9546903552.00, update minErr
+Training iteration 4. error = 9511092224.00 < minErr = 9526061056.00, update minErr
+Training iteration 5. error = 9499713536.00 < minErr = 9511092224.00, update minErr
+Training iteration 6. error = 9490961408.00 < minErr = 9499713536.00, update minErr
+Training iteration 7. error = 9483902976.00 < minErr = 9490961408.00, update minErr
+Training iteration 8. error = 9477945344.00 < minErr = 9483902976.00, update minErr
+Training iteration 9. error = 9473079296.00 < minErr = 9477945344.00, update minErr
+Training iteration 10. error = 9469328384.00 < minErr = 9473079296.00, update minErr
+Training iteration 11. error = 9466356736.00 < minErr = 9469328384.00, update minErr
+Training iteration 12. error = 9464097792.00 < minErr = 9466356736.00, update minErr
+Training iteration 13. error = 9462295552.00 < minErr = 9464097792.00, update minErr
+Training iteration 14. error = 9461003264.00 < minErr = 9462295552.00, update minErr
+Training iteration 15. error = 9460018176.00 < minErr = 9461003264.00, update minErr
+Training iteration 16. error = 9459154944.00 < minErr = 9460018176.00, update minErr
+Training iteration 17. error = 9458518016.00 < minErr = 9459154944.00, update minErr
+Training iteration 18. error = 9458034688.00 < minErr = 9458518016.00, update minErr
+Training iteration 19. error = 9457676288.00 < minErr = 9458034688.00, update minErr
+Training iteration 20. error = 9457471488.00 < minErr = 9457676288.00, update minErr
+Training iteration 21. error = 9457214464.00 < minErr = 9457471488.00, update minErr
+Training iteration 22. error = 9457076224.00 < minErr = 9457214464.00, update minErr
+Training iteration 23. error = 9456980992.00 < minErr = 9457076224.00, update minErr
+Training iteration 24. error = 9456917504.00 < minErr = 9456980992.00, update minErr
+[Info] Finish Kmeans training
+The 7 deviation error of fine clusters is 9.45692e+09
+
+[Info] RVQ training iteration 8
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14188326912.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9547836416.00 < minErr = 14188326912.00, update minErr
+Training iteration 2. error = 9511023616.00 < minErr = 9547836416.00, update minErr
+Training iteration 3. error = 9492001792.00 < minErr = 9511023616.00, update minErr
+Training iteration 4. error = 9480134656.00 < minErr = 9492001792.00, update minErr
+Training iteration 5. error = 9472143360.00 < minErr = 9480134656.00, update minErr
+Training iteration 6. error = 9466824704.00 < minErr = 9472143360.00, update minErr
+Training iteration 7. error = 9463195648.00 < minErr = 9466824704.00, update minErr
+Training iteration 8. error = 9460691968.00 < minErr = 9463195648.00, update minErr
+Training iteration 9. error = 9459202048.00 < minErr = 9460691968.00, update minErr
+Training iteration 10. error = 9458179072.00 < minErr = 9459202048.00, update minErr
+Training iteration 11. error = 9457563648.00 < minErr = 9458179072.00, update minErr
+Training iteration 12. error = 9457142784.00 < minErr = 9457563648.00, update minErr
+Training iteration 13. error = 9456869376.00 < minErr = 9457142784.00, update minErr
+Training iteration 14. error = 9456642048.00 < minErr = 9456869376.00, update minErr
+Training iteration 15. error = 9456527360.00 < minErr = 9456642048.00, update minErr
+Training iteration 16. error = 9456406528.00 < minErr = 9456527360.00, update minErr
+Training iteration 17. error = 9456294912.00 < minErr = 9456406528.00, update minErr
+Training iteration 18. error = 9456265216.00 < minErr = 9456294912.00, update minErr
+Training iteration 19. error = 9456186368.00 < minErr = 9456265216.00, update minErr
+Training iteration 20. error = 9456168960.00 < minErr = 9456186368.00, update minErr
+Training iteration 21. error = 9456137216.00 < minErr = 9456168960.00, update minErr
+Training iteration 22. error = 9456109568.00 < minErr = 9456137216.00, update minErr
+Training iteration 23. error = 9456098304.00 < minErr = 9456109568.00, update minErr
+Training iteration 24. error = 9456091136.00 < minErr = 9456098304.00, update minErr
+[Info] Finish Kmeans training
+The8 deviation error of coarse clusters is 9.45609e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13724729344.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9582108672.00 < minErr = 13724729344.00, update minErr
+Training iteration 2. error = 9546399744.00 < minErr = 9582108672.00, update minErr
+Training iteration 3. error = 9525593088.00 < minErr = 9546399744.00, update minErr
+Training iteration 4. error = 9510520832.00 < minErr = 9525593088.00, update minErr
+Training iteration 5. error = 9499399168.00 < minErr = 9510520832.00, update minErr
+Training iteration 6. error = 9490619392.00 < minErr = 9499399168.00, update minErr
+Training iteration 7. error = 9483385856.00 < minErr = 9490619392.00, update minErr
+Training iteration 8. error = 9477482496.00 < minErr = 9483385856.00, update minErr
+Training iteration 9. error = 9472749568.00 < minErr = 9477482496.00, update minErr
+Training iteration 10. error = 9468946432.00 < minErr = 9472749568.00, update minErr
+Training iteration 11. error = 9465837568.00 < minErr = 9468946432.00, update minErr
+Training iteration 12. error = 9463442432.00 < minErr = 9465837568.00, update minErr
+Training iteration 13. error = 9461635072.00 < minErr = 9463442432.00, update minErr
+Training iteration 14. error = 9460198400.00 < minErr = 9461635072.00, update minErr
+Training iteration 15. error = 9459096576.00 < minErr = 9460198400.00, update minErr
+Training iteration 16. error = 9458378752.00 < minErr = 9459096576.00, update minErr
+Training iteration 17. error = 9457723392.00 < minErr = 9458378752.00, update minErr
+Training iteration 18. error = 9457257472.00 < minErr = 9457723392.00, update minErr
+Training iteration 19. error = 9456820224.00 < minErr = 9457257472.00, update minErr
+Training iteration 20. error = 9456585728.00 < minErr = 9456820224.00, update minErr
+Training iteration 21. error = 9456377856.00 < minErr = 9456585728.00, update minErr
+Training iteration 22. error = 9456183296.00 < minErr = 9456377856.00, update minErr
+Training iteration 23. error = 9456050176.00 < minErr = 9456183296.00, update minErr
+Training iteration 24. error = 9455963136.00 < minErr = 9456050176.00, update minErr
+[Info] Finish Kmeans training
+The 8 deviation error of fine clusters is 9.45596e+09
+
+[Info] RVQ training iteration 9
+[Info] Training coarse codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 14192541696.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9547844608.00 < minErr = 14192541696.00, update minErr
+Training iteration 2. error = 9510795264.00 < minErr = 9547844608.00, update minErr
+Training iteration 3. error = 9491600384.00 < minErr = 9510795264.00, update minErr
+Training iteration 4. error = 9479663616.00 < minErr = 9491600384.00, update minErr
+Training iteration 5. error = 9471632384.00 < minErr = 9479663616.00, update minErr
+Training iteration 6. error = 9466017792.00 < minErr = 9471632384.00, update minErr
+Training iteration 7. error = 9462290432.00 < minErr = 9466017792.00, update minErr
+Training iteration 8. error = 9459887104.00 < minErr = 9462290432.00, update minErr
+Training iteration 9. error = 9458275328.00 < minErr = 9459887104.00, update minErr
+Training iteration 10. error = 9457236992.00 < minErr = 9458275328.00, update minErr
+Training iteration 11. error = 9456459776.00 < minErr = 9457236992.00, update minErr
+Training iteration 12. error = 9456156672.00 < minErr = 9456459776.00, update minErr
+Training iteration 13. error = 9455960064.00 < minErr = 9456156672.00, update minErr
+Training iteration 14. error = 9455772672.00 < minErr = 9455960064.00, update minErr
+Training iteration 15. error = 9455579136.00 < minErr = 9455772672.00, update minErr
+Training iteration 16. error = 9455433728.00 < minErr = 9455579136.00, update minErr
+Training iteration 17. error = 9455386624.00 < minErr = 9455433728.00, update minErr
+Training iteration 18. error = 9455337472.00 < minErr = 9455386624.00, update minErr
+Training iteration 19. error = 9455296512.00 < minErr = 9455337472.00, update minErr
+Training iteration 20. error = 9455285248.00 < minErr = 9455296512.00, update minErr
+Training iteration 21. error = 9455247360.00 < minErr = 9455285248.00, update minErr
+Training iteration 22. error = 9455217664.00 < minErr = 9455247360.00, update minErr
+Training iteration 23. error = 9455191040.00 < minErr = 9455217664.00, update minErr
+Training iteration 24. error = 9455155200.00 < minErr = 9455191040.00, update minErr
+[Info] Finish Kmeans training
+The9 deviation error of coarse clusters is 9.45516e+09
+
+[Info] Training fine codebook
+[Info] Start Kmeans training
+Training iteration 0. error = 13730777088.00 < minErr = 340282346638528859811704183484516925440.00, update minErr
+Training iteration 1. error = 9581457408.00 < minErr = 13730777088.00, update minErr
+Training iteration 2. error = 9546045440.00 < minErr = 9581457408.00, update minErr
+Training iteration 3. error = 9525058560.00 < minErr = 9546045440.00, update minErr
+Training iteration 4. error = 9510037504.00 < minErr = 9525058560.00, update minErr
+Training iteration 5. error = 9498769408.00 < minErr = 9510037504.00, update minErr
+Training iteration 6. error = 9489866752.00 < minErr = 9498769408.00, update minErr
+Training iteration 7. error = 9482603520.00 < minErr = 9489866752.00, update minErr
+Training iteration 8. error = 9476589568.00 < minErr = 9482603520.00, update minErr
+Training iteration 9. error = 9471757312.00 < minErr = 9476589568.00, update minErr
+Training iteration 10. error = 9468112896.00 < minErr = 9471757312.00, update minErr
+Training iteration 11. error = 9465140224.00 < minErr = 9468112896.00, update minErr
+Training iteration 12. error = 9462776832.00 < minErr = 9465140224.00, update minErr
+Training iteration 13. error = 9460889600.00 < minErr = 9462776832.00, update minErr
+Training iteration 14. error = 9459316736.00 < minErr = 9460889600.00, update minErr
+Training iteration 15. error = 9458234368.00 < minErr = 9459316736.00, update minErr
+Training iteration 16. error = 9457463296.00 < minErr = 9458234368.00, update minErr
+Training iteration 17. error = 9456822272.00 < minErr = 9457463296.00, update minErr
+Training iteration 18. error = 9456323584.00 < minErr = 9456822272.00, update minErr
+Training iteration 19. error = 9455964160.00 < minErr = 9456323584.00, update minErr
+Training iteration 20. error = 9455664128.00 < minErr = 9455964160.00, update minErr
+Training iteration 21. error = 9455459328.00 < minErr = 9455664128.00, update minErr
+Training iteration 22. error = 9455243264.00 < minErr = 9455459328.00, update minErr
+Training iteration 23. error = 9455150080.00 < minErr = 9455243264.00, update minErr
+Training iteration 24. error = 9455011840.00 < minErr = 9455150080.00, update minErr
+[Info] Finish Kmeans training
+The 9 deviation error of fine clusters is 9.45501e+09
+
+coarse centroid [0]:43.347504 56.554161 64.835938 51.641407 55.321529 54.358845 63.363907 43.549339 51.393078 43.082191 61.338337 49.459698 51.461922 51.874218 49.137623 43.443115 53.035522 44.194569 34.171288 54.029816 54.484993 57.976528 49.704674 57.887836 40.488701 57.482883 51.637360 41.815254 51.494328 43.053112 52.225121 58.774254 50.421177 50.515430 42.242790 54.062466 59.465034 44.311604 56.804436 56.552944 39.668091 42.969044 47.650269 56.043526 38.641445 55.760143 39.649117 59.652775 47.276825 55.038231 45.269112 44.021866 48.477005 51.530792 50.581642 38.064949 55.074036 42.984924 44.156132 51.128315 46.649097 46.215286 48.888512 54.739471 46.721962 51.962639 46.091690 41.675224 51.868431 51.870808 53.695908 42.045341 46.553333 41.852291 45.513252 41.983093 60.103863 37.002861 55.282387 50.560867 58.184860 59.404575 56.400650 68.392967 50.464943 55.361065 48.783184 51.161957 57.227676 44.684101 35.128727 57.167938 40.595425 52.798744 43.801655 39.303921 55.011284 50.747841 39.131123 42.401054 56.105404 44.041656 61.746529 44.506027 54.715256 57.847721 47.108635 51.223785 47.332085 46.195965 57.865982 45.403526 40.321529 60.598297 56.979351 47.630074 49.009964 48.007877 50.750214 41.999203 58.147633 55.904022 54.072674 44.961739 39.531242 53.629044 60.100590 33.863628 
+fine centroid [0]:-7.100293 2.266650 -4.380730 -3.685906 -7.537694 4.701509 -2.520254 5.915546 6.298111 0.123836 -0.216751 -1.001429 4.845510 0.160414 -7.239498 -13.043924 -8.294930 1.820482 -6.833301 -0.298669 1.253213 7.526451 5.062012 1.368894 6.060668 -3.924034 -0.359957 1.996104 -7.835770 -8.946912 -13.452164 -6.750912 2.809474 -12.749435 -9.488496 7.350357 -0.516743 11.745724 4.206478 -5.962436 -8.948587 -1.683430 -7.498565 -3.164154 1.023282 8.270827 -7.939854 -5.357223 -0.214755 -2.319113 -0.989778 -2.965625 7.329853 -0.541053 8.087144 -6.964133 -4.108407 -12.506218 -4.742954 -6.664996 -10.854746 10.808762 10.176738 -3.244319 4.481479 8.258230 -5.000188 9.095394 -9.171209 1.504328 4.753085 5.810415 -4.548248 -0.571924 -7.088474 -11.257268 -2.976272 -2.054862 -0.891550 4.470550 15.661406 9.347898 -9.600938 13.356678 4.584019 -9.983717 9.632690 -10.119451 8.906514 -0.510202 -10.557084 5.649441 4.864073 -12.914212 -2.497919 -10.849959 1.439334 -8.169826 -1.819807 -7.002389 -1.227464 -7.516524 2.051648 -6.402108 7.875389 6.684792 -0.234464 -0.141852 -3.134307 2.325701 0.909833 10.874530 12.539567 8.061727 -0.524191 4.905474 10.766474 -13.281727 -1.788655 -6.902909 -3.494407 -2.970591 2.820533 -16.390520 -2.631251 7.906807 3.971553 -5.615354 
+coarse centroid [1]:57.771996 43.526703 58.259693 46.820248 45.649124 48.029198 50.498337 49.755634 47.071484 58.649803 46.088551 48.265259 39.498875 61.421528 52.083183 55.732319 51.155777 34.990128 41.649349 51.801590 40.595638 56.558937 58.165154 38.586323 58.066677 48.724289 51.296207 53.452362 52.667824 49.796707 45.993954 37.356541 50.298031 44.407631 43.751614 40.135502 41.295856 53.890354 36.401428 56.833015 35.684616 51.659477 52.695606 58.234264 44.336235 61.103233 53.439198 54.744839 45.583389 58.097546 47.994438 41.928410 49.911213 47.694447 59.972263 59.019413 48.703899 50.781429 44.172001 41.746666 53.050694 53.051617 46.619492 56.335693 50.657997 33.237850 53.746334 51.614502 51.652176 57.178867 62.501923 46.493618 34.194782 46.768570 50.454300 48.692059 50.222706 60.015419 27.913668 48.424324 46.012890 43.042976 61.007286 45.706486 57.770939 52.112888 51.635002 49.320156 46.100971 65.676773 36.425694 54.133099 56.982666 59.175625 58.181934 40.389477 51.739002 54.418232 48.697090 50.758053 45.100628 46.355499 55.415699 46.462605 62.440536 47.479374 54.395176 41.401440 44.515209 49.376747 50.338028 53.947777 47.618008 50.084347 43.749916 47.682175 48.078537 56.054092 48.830917 45.282204 53.038002 51.643253 56.170326 37.857883 38.547146 58.152504 40.545071 42.132725 
+fine centroid [1]:14.664011 2.128546 2.967973 -1.327679 2.395938 5.708863 4.593881 0.113523 8.826441 4.033436 7.794588 -4.437839 14.110266 4.231071 4.839216 -8.153567 4.720523 2.244989 -2.564988 2.725779 0.260709 -7.111091 2.622332 -5.860656 1.150217 4.009837 -10.651567 8.121423 -4.628879 -1.380436 -4.513096 -11.990802 2.525401 -0.640060 13.589602 5.697626 -6.871181 -10.905108 -3.935107 10.118292 -14.849046 -8.812227 4.107009 -4.330446 -9.187069 -3.954447 -3.296356 5.579948 -6.777892 1.244348 -7.679824 -0.036877 -4.693671 4.188686 -9.609994 -1.679791 -9.879736 -1.360217 -1.883073 11.121881 -6.434666 -2.394907 -6.790324 17.009405 15.401432 4.487225 -5.507443 -8.668782 -13.973071 -0.504539 8.471280 3.943853 -6.354286 -0.205854 0.843836 -7.246026 -0.636878 -4.055168 3.879234 12.590813 3.105933 -8.171096 2.439596 -3.643883 -5.509578 -5.742633 -1.764434 0.417602 3.717987 6.126282 7.368811 -5.162473 5.082410 13.106480 4.662229 2.958822 -9.250813 -6.063113 9.918266 -9.240525 -11.886296 -3.997068 5.004561 -4.522028 -1.495618 2.076324 -3.813805 -5.353842 -6.761124 -2.205793 0.280940 6.791857 8.447330 -14.499759 7.079622 -0.518440 6.485145 -6.269383 9.550621 -8.972529 -3.791164 -16.203432 3.509064 4.734631 0.167554 0.206146 5.576439 -7.596713 
+coarse centroid [2]:42.828693 54.693848 50.360832 51.697479 43.723442 42.724304 49.749298 51.885967 59.718357 48.544991 47.901646 31.020658 48.592335 63.275288 41.076595 47.970436 46.754257 52.570671 51.511456 46.046669 61.054390 51.789387 49.353851 44.719063 52.535099 40.809078 50.802567 46.415924 52.921741 57.790100 46.423904 45.785862 42.139816 42.606579 49.043003 57.547558 52.575912 44.185642 49.366131 52.140278 56.741486 50.914131 46.269527 47.071430 53.659252 54.531406 42.732533 46.792416 51.531975 41.825424 50.643669 55.399292 37.850544 50.527630 59.215183 44.652245 44.177700 63.794361 56.817402 56.337231 48.278866 45.257065 44.368332 46.341660 37.743946 48.718563 41.707664 48.582832 50.946785 50.061707 36.220772 54.704754 34.786453 56.630890 56.170017 43.097557 34.859951 53.733986 38.534554 60.460827 55.072235 37.071476 44.548840 46.170540 49.448288 50.275822 68.821762 53.127991 59.153645 48.797607 49.475258 45.397793 43.453663 64.649185 47.350159 55.693031 44.799610 61.832150 58.972164 50.322807 59.202492 46.779373 53.974834 61.768444 50.194130 63.709816 47.063137 50.129990 57.807995 52.533169 51.212910 54.237473 54.023540 54.645859 47.571766 35.682919 64.103050 42.682308 46.443535 50.411880 53.889690 53.461456 46.667416 50.174667 50.168156 38.127724 49.301628 45.577454 
+fine centroid [2]:-6.112716 8.127632 -2.077078 -10.021074 -8.641640 -7.873211 -11.185484 8.232508 0.472082 2.735157 7.911857 -1.168076 -13.051147 -0.092432 -10.289998 8.962324 0.860575 1.312540 -4.895046 6.820437 -7.097323 -8.527399 -16.493727 5.257546 7.691051 -0.725348 -2.119749 -7.470271 3.459229 8.957753 1.013467 11.885014 -6.715961 -4.562963 -0.956796 9.383881 -0.610345 -4.437820 10.994927 6.080234 -0.241391 0.470929 10.503257 -0.088961 5.320431 3.349488 12.365299 10.149013 -0.762169 -8.262680 -0.260600 -0.159182 0.577933 0.866362 12.383052 -10.375377 -2.232586 3.558358 -4.019858 10.529346 -5.120129 9.867280 7.640491 2.232953 -7.394363 -10.673192 9.463770 14.654963 -6.774811 -7.947552 0.470788 -5.092576 -4.705998 -1.626489 1.087757 -2.056570 0.772845 -8.643996 0.608988 -2.988265 6.961994 -6.747622 -9.011703 2.821359 -8.482776 3.566934 -6.295477 4.985604 12.415317 -1.307139 -2.617212 5.120816 13.585361 5.874717 15.995829 -2.779290 -1.982219 6.901454 -5.538229 2.571258 7.385417 -1.025819 3.017627 -3.111104 1.543748 -6.616920 2.213338 -11.935351 9.451152 -2.646171 -6.351592 11.126231 -0.633174 -16.966139 3.195164 0.665966 -3.460795 -0.455753 -1.676303 -3.753231 7.634139 -4.573844 -6.343735 6.614987 1.069241 -7.079988 4.411494 7.070544 
+coarse centroid [3]:56.236874 50.519520 54.751743 50.763916 52.373329 42.975029 40.707832 45.750694 48.831020 40.682755 60.961029 47.113182 37.412212 47.199139 40.239433 50.848011 48.805771 53.590828 45.682114 43.731651 44.259132 53.757446 55.319134 66.642998 53.066917 49.528347 60.259357 51.876255 47.118771 57.346020 54.869633 50.969887 60.599358 43.898224 55.487740 55.968559 54.516098 53.797810 61.933998 37.939621 52.852432 48.153736 33.476513 53.760357 52.920845 54.010605 59.744461 50.947506 45.919956 37.511181 43.653534 53.803005 62.363949 50.491562 60.496910 49.948090 45.824718 59.825859 54.355396 41.967678 62.215263 55.376156 48.944687 53.384113 53.756462 48.690529 58.327744 48.960938 57.980202 50.252960 51.288651 42.569862 38.398003 43.187000 41.885838 41.466946 49.204201 50.165344 50.670353 58.152111 48.112164 36.207165 55.268822 48.351734 53.542511 48.535259 40.260841 49.974739 62.838882 42.531277 49.257099 45.283501 46.284420 61.232887 43.796848 40.011814 37.965416 46.445492 57.032322 33.944214 45.341206 53.457245 51.798153 58.496647 38.218403 46.882896 54.282166 42.402534 47.264156 48.548290 39.199795 56.819801 44.354969 55.909588 46.276642 49.856388 45.506195 44.971268 61.164562 59.071594 56.640148 48.240143 51.347443 42.241257 41.050587 48.528618 45.078110 42.470257 
+fine centroid [3]:13.574413 -0.394077 4.693832 10.470562 -1.723172 13.743216 3.426566 -9.980748 7.840248 8.285813 5.623560 2.012542 -2.416696 1.839326 -6.016586 -6.063347 -4.875012 7.116236 -0.322194 3.603507 3.059383 -5.945911 0.252630 -1.289447 -0.178674 6.313805 8.418059 -2.455491 -5.408149 0.653845 6.956028 -4.019335 1.865329 -0.528848 -13.945670 9.850666 -8.521146 4.688651 -12.672243 -7.655851 2.517481 -3.209995 -10.712689 1.786341 4.485567 0.110169 10.581414 15.576126 -1.777492 4.048973 -7.114026 0.106700 -4.102538 -1.417367 8.469063 10.012912 1.339777 -6.469689 8.159484 -9.956951 -6.969364 8.219275 -7.040613 -0.711658 1.284789 6.143355 0.433025 -3.184837 5.085407 -5.659022 11.946959 -3.041828 6.412047 9.552248 -10.127770 0.848423 -6.177715 -8.818688 -0.602607 0.961419 6.228521 -8.911952 2.736928 -12.596319 -7.339031 -14.248428 2.921692 6.034865 -6.972064 -2.230175 6.987158 1.663333 2.002934 -5.905499 -2.265068 -6.925309 10.006181 8.816528 5.048179 1.084051 0.235385 -11.985189 1.563669 4.133874 -0.972451 -12.084150 -8.587420 -6.011612 15.454380 8.659869 3.847209 0.367891 -9.639989 -2.134402 -6.779158 -0.716621 -1.980862 -17.098680 -1.210348 5.317841 -5.929249 6.488986 7.714549 -0.054794 -0.338863 3.349718 0.686252 8.861364 
+coarse centroid [4]:52.564468 57.731407 39.910789 46.873150 51.083382 44.619766 46.776505 43.606953 51.443317 61.217335 55.086140 49.590321 55.190300 62.056530 39.250477 42.036655 49.299370 54.535015 51.192146 35.099735 43.942127 56.944214 54.819393 52.220364 46.945217 51.022755 52.786369 46.626987 55.568371 43.826084 55.628166 46.673763 40.711594 40.731464 65.125526 51.186600 45.721222 57.800350 45.983803 51.502556 59.580605 54.549767 37.083710 40.857937 38.661781 42.589798 48.358776 53.585495 53.813702 44.945206 55.377903 39.575916 49.585045 43.673725 36.794827 48.812954 54.597340 50.921421 54.694317 51.913780 38.179455 39.822002 62.188469 44.130306 44.893852 55.658737 41.046535 54.777218 46.675777 50.715496 53.768738 58.100410 39.513329 58.734905 44.251541 40.063080 54.058338 46.219257 60.469158 55.916119 35.489315 49.278877 51.834656 64.695328 45.428211 51.056458 48.939907 48.687855 55.153126 64.622040 42.833893 40.344864 53.482704 53.730484 42.236195 53.895996 51.929661 59.852787 40.674904 55.659279 42.874763 52.266541 52.958675 37.209511 45.750805 63.378601 58.625015 51.004986 48.114162 62.013721 43.300385 52.296207 42.896854 53.686069 55.725933 53.783257 50.411827 41.169418 46.236217 53.061081 58.076458 47.933933 52.687737 60.106857 54.859032 46.381931 55.615723 53.077999 
+fine centroid [4]:-2.225525 -5.285070 -1.426176 -4.872652 3.065209 -6.454499 -0.661474 10.744881 2.364878 -2.539719 4.569232 10.915996 -6.194540 8.065380 5.077775 -10.250811 3.687522 -10.110673 11.875906 -4.780516 -0.171152 2.790673 -1.472221 -5.443748 5.330762 -10.453821 -10.658503 -15.104877 -2.100367 -4.146174 6.230515 -6.966695 1.817389 -1.942205 -11.252831 -2.828010 -1.517976 4.476544 -12.609264 -8.158881 -2.735489 3.497622 1.207768 -4.515410 -5.379642 -6.925463 12.715863 -0.155636 -3.872405 -4.512911 6.880404 -9.498503 -9.451735 -8.128693 -1.201813 -2.256432 9.570404 6.511662 -13.788748 -6.797830 2.846660 6.029363 13.028270 1.901868 -5.283994 11.423803 -5.952679 3.390172 -9.299987 1.661148 -6.555979 -0.340451 -4.154539 -0.691453 -5.168033 2.931139 -6.781582 -3.944263 0.938114 10.890741 -9.728114 -7.082666 4.663203 -2.567964 -2.896501 -5.389356 8.536628 -4.065723 2.051445 -9.197302 -2.639018 6.641858 -5.878922 -3.275847 8.848009 7.470440 10.029552 -5.081236 10.234129 -7.454203 -11.607608 7.829826 4.791339 -1.972579 12.212284 4.197276 13.911127 9.228141 0.070574 -5.828433 1.777792 0.017131 -9.090445 1.055287 -2.209276 -7.757480 -8.579186 -16.472307 -4.545250 3.011015 -3.586836 -11.703629 0.236727 2.229593 -0.466424 -0.814018 0.347934 -11.733582 
+coarse centroid [5]:33.844185 45.960224 50.326046 52.343452 64.519775 52.068630 53.605988 49.745121 51.421276 49.897060 50.133698 52.116695 48.410465 55.739849 43.203926 41.625942 48.429394 57.785946 45.766087 40.603878 38.222721 39.724064 44.355423 55.054420 51.809776 54.461727 61.382000 51.790207 60.072166 58.854069 48.827457 48.230431 59.464916 40.925739 56.464493 41.139023 44.215340 50.667419 40.387516 51.389851 43.698212 61.405773 59.976883 47.017982 54.143829 42.151588 38.065289 55.216553 57.515823 55.659561 46.808659 52.957066 49.098171 47.904736 45.867798 39.763607 46.734642 46.045338 54.246582 43.094563 39.301640 48.967670 60.374550 50.547840 53.580734 40.296959 58.036282 56.582623 39.871078 47.966061 51.536736 52.510509 51.917217 54.691242 55.361286 41.459846 38.354256 41.054276 41.894989 41.086388 46.367645 56.876747 49.634918 37.847431 60.869743 52.466679 44.545578 55.291702 44.952305 59.149887 44.789082 48.829044 39.885994 43.244942 63.191338 47.588203 69.110130 54.658775 65.859467 47.652088 54.682556 44.791389 55.046829 52.967632 39.726650 55.818401 53.433018 43.673088 53.763615 48.628239 45.208767 51.649273 37.205952 42.835663 57.454990 56.741268 49.315979 54.445988 52.082535 45.472759 55.574749 50.957771 42.586376 35.192997 55.454117 47.512421 55.098198 47.842163 
+fine centroid [5]:2.766274 1.427946 0.944628 6.373140 -0.153235 -0.425922 -6.176680 -11.841673 -1.925179 1.549606 6.693119 6.833634 -9.902465 -6.776848 -9.421316 -0.131391 -13.036179 0.468587 -7.045987 0.701648 -5.604759 -2.565861 -6.388874 -4.233919 -3.924998 2.370683 11.982577 -13.543626 -4.627805 -2.475521 9.667109 3.849847 -2.181647 -6.924622 4.308996 -11.694165 9.423363 -3.645629 -2.992302 -1.341788 -8.908049 8.011042 -11.654206 -9.350033 7.111912 -8.667431 3.963914 -12.572633 9.753987 -5.104577 5.411553 4.496441 6.464843 -3.990512 2.090176 -7.199841 2.864202 -1.337874 -7.918502 2.339757 3.109178 -9.086894 2.847893 -6.008828 8.636444 11.636154 -2.659408 4.029947 -1.307160 -0.235123 13.993108 -6.719265 7.108549 0.054112 1.470494 -12.473490 6.783113 0.100717 7.153595 -5.602466 0.228324 6.599173 -2.989811 -4.672208 -13.678828 -6.717845 -8.200720 6.003747 -7.085686 -0.344346 -6.153279 -8.311477 -1.913390 -12.038957 5.271933 -9.314749 6.206448 6.915240 -0.162716 1.696639 3.947070 -1.573613 3.033342 4.523293 -6.022929 5.739120 -7.827917 -8.581115 1.394350 4.330082 6.249063 -4.504208 -0.356870 0.401095 -10.838675 -5.757985 -2.401300 -2.566231 -14.416707 -9.143609 13.236489 -9.927969 10.316479 -7.888198 0.879536 6.460702 10.812574 -13.588050 
+coarse centroid [6]:52.395287 48.485355 46.240688 44.981438 57.304153 40.230011 44.752918 49.914742 66.831108 38.237812 45.539753 41.231300 41.155357 45.179432 36.310799 50.663017 40.784962 54.984638 58.375954 48.280346 56.387665 43.351387 45.809086 50.548058 49.342175 44.097816 53.129944 52.655514 43.454247 52.511497 53.558777 41.169716 42.961918 45.629318 61.166100 42.563461 56.846687 45.923656 58.672611 44.438004 45.332363 39.124851 46.557800 43.654991 50.919807 46.679974 41.835655 57.849400 57.220921 45.650066 57.495975 58.308868 65.061722 60.045132 48.566174 50.062473 46.597855 49.121803 57.069977 54.311836 47.872345 54.411400 54.371937 38.680134 59.409336 57.254452 47.146564 49.799889 44.787392 50.588161 60.921688 42.913761 56.808205 43.304474 46.640171 60.571091 42.747021 42.246422 43.545834 44.002224 56.725788 53.881824 44.841282 55.886333 51.739735 48.708309 51.993774 35.678234 59.210602 53.909962 61.319294 57.580223 39.522991 56.925419 59.994984 41.179974 50.673492 57.888451 47.568115 57.513084 44.163216 41.423267 48.723984 45.043289 53.160057 53.087536 47.271046 62.293667 50.627644 54.828159 58.196873 59.540901 47.328941 61.020016 39.058067 44.907051 55.069183 56.869946 51.633205 53.853939 42.059673 44.113678 35.711979 57.915768 58.741791 50.126995 43.164227 52.583118 
+fine centroid [6]:-10.095725 -11.342096 -4.865927 -10.725916 8.459867 -8.713767 6.092018 -4.606613 2.775658 -6.596573 -5.595433 3.303581 4.162644 -7.254494 5.776388 7.524737 1.765878 -13.085366 7.969082 -13.793836 -7.574821 7.890789 4.782887 -0.737719 6.446671 1.625116 1.404034 -2.712047 5.191949 3.465351 1.138761 11.929817 6.265627 -4.225601 1.062911 10.038952 8.635975 2.370501 4.031747 -2.274292 -4.903772 -3.046205 -1.549216 -10.315022 -10.796142 -1.755354 -5.757237 8.701811 5.290112 0.628965 0.644841 -0.530112 7.658657 -1.803265 -9.318857 -14.719412 -6.995689 12.297954 3.859780 9.101497 -7.613408 12.633092 0.879422 -8.364532 6.076078 -6.111251 -4.657904 5.839321 3.782392 -9.374746 4.201048 -4.724442 -4.271192 2.202252 -3.529524 4.469821 8.863899 10.963821 5.431016 -4.907253 5.802385 -9.723509 6.733445 3.340472 -4.501494 9.208998 1.439632 -3.664283 9.244078 -5.791369 6.352560 2.209452 -3.443321 0.533869 2.804608 -5.842512 -6.096687 -1.660420 5.717841 -17.337275 -4.817057 -11.083776 -1.258090 -1.312995 2.610318 6.612052 10.291636 -2.478550 -5.828931 3.728632 -6.803563 -19.369350 5.336806 13.211004 -0.320689 -3.215314 -2.068583 -2.809482 3.610214 -15.545213 -5.222734 -0.951078 0.070858 7.331134 1.277129 -3.388529 4.214414 7.959055 
+coarse centroid [7]:64.028694 42.902897 55.787773 56.615536 57.418106 55.197250 40.094067 60.771881 53.939137 46.698334 46.641144 42.499649 64.206650 49.676258 48.175003 66.117523 53.457531 51.817047 57.013027 54.742962 42.952415 53.703922 59.811077 52.797089 54.094456 59.528999 62.118183 50.844715 40.323578 48.340813 40.302219 56.330284 39.416367 51.338127 51.017056 45.194366 43.119831 40.812130 56.223740 51.744839 45.259045 54.594894 44.537399 37.778221 38.422581 56.872421 46.904575 49.620735 48.191223 49.495583 49.996914 57.020874 57.979897 50.425121 50.944595 56.887138 61.953629 49.228420 43.234955 53.909676 57.248089 41.087639 49.037128 45.030193 41.982803 51.382664 47.389751 52.216743 47.306366 53.921787 45.291176 48.007500 44.242424 53.250858 45.992641 55.328449 46.098721 54.537323 57.676537 38.994141 57.674259 37.006496 60.542236 55.491291 61.699501 55.480175 60.430759 43.876484 51.936665 53.628838 42.307240 42.821831 52.508823 39.665592 46.444725 48.997124 58.694088 49.395405 47.460857 33.951477 58.990765 50.523247 49.302147 58.087349 46.539974 46.704346 60.124081 54.381096 51.505997 49.167759 61.593430 39.963966 49.452721 57.970783 54.766670 50.217476 51.022755 61.222176 44.725948 57.468872 46.473969 53.602867 60.680927 51.536030 50.800735 43.150051 66.605461 53.327675 
+fine centroid [7]:2.406473 -5.135554 5.555152 6.033734 4.481614 -15.659893 7.242342 0.997203 8.228065 -5.210654 -3.184424 -0.761716 8.934206 4.476986 2.550024 -6.022716 12.307705 0.882825 2.080028 -6.013342 -1.788285 0.994037 -4.322967 3.500149 9.777130 -1.770581 0.409093 3.669184 1.183321 2.335158 6.013924 4.687876 -10.595651 -14.925359 -0.453536 7.326335 -11.525094 -2.604376 -3.429884 -0.365881 4.418576 -11.495207 -0.985809 -11.837665 2.656198 5.622858 0.734851 -7.634097 -2.927053 -13.621280 -4.450385 1.222373 -2.139736 10.655153 6.978071 -4.523437 -1.199128 -9.159151 -17.355150 7.198472 10.306582 10.204889 7.322540 -4.483821 -15.772656 3.372141 -8.217679 -6.421823 2.868309 8.223278 -6.645898 3.538222 -1.115302 -1.541882 0.853185 -2.929415 -10.570506 -5.713829 5.646271 -0.634134 -0.162037 -9.662298 7.568590 -8.291634 -9.414844 5.655656 11.199603 4.163832 -8.416794 0.494670 12.026734 4.136205 7.099205 -7.920692 9.830926 5.398354 8.772730 0.298680 3.138597 -5.123971 1.585866 -4.317986 -0.974190 -4.087155 -1.903411 6.593727 10.313027 -5.778690 9.730318 -1.669366 -8.722454 -4.973111 3.104755 -7.086490 0.220453 1.629144 3.900844 13.998496 1.670006 9.783436 -7.462899 5.003529 9.471390 -4.700889 -11.427322 -13.646393 -8.688514 -6.312681 
+coarse centroid [8]:37.576519 65.257996 48.520042 43.841808 48.550293 46.473488 43.331310 45.296803 50.590557 46.029839 51.414516 48.274456 44.141933 46.028770 50.725544 50.765549 55.743805 48.357677 45.237976 60.818031 45.796291 48.560917 53.987080 52.950951 62.879559 42.288956 48.075340 64.528488 41.200035 51.275486 57.374886 49.204262 41.090523 45.441029 46.027512 39.748718 45.767372 57.884945 54.643616 50.662914 50.454338 50.556145 55.870377 58.456562 39.477871 53.144379 49.707340 55.966095 58.231903 54.401787 36.607647 56.821239 49.815044 45.661476 40.520786 45.173931 54.481049 53.523396 44.986446 50.601738 53.277336 40.393051 55.354492 43.539497 36.577312 36.479259 42.373955 42.190746 60.857174 54.129997 58.461491 54.188087 45.244736 55.251663 49.083897 48.687298 51.075115 47.254986 43.848827 59.855396 47.800076 40.482452 52.085850 56.875393 44.985352 37.198471 39.361862 56.392555 41.659290 53.091595 64.562164 52.722015 56.156712 55.110046 63.289158 41.444107 46.417091 53.941765 47.590427 47.002422 46.311825 43.076992 56.551693 63.146011 40.159027 52.299168 62.451767 57.656391 49.045052 55.962749 60.379841 45.446930 40.784222 56.232784 57.315380 54.806934 47.563023 45.113571 56.534382 59.344906 50.000038 58.523693 54.089722 58.010307 45.058308 57.182064 57.190746 38.658344 
+fine centroid [8]:-5.199923 6.359983 -1.354195 11.994848 4.582784 -7.855169 2.011568 0.270143 6.442710 6.794601 2.280929 11.689774 3.774820 -0.582978 -4.061301 7.545361 6.551583 -1.772554 -0.938483 -0.647465 6.269837 -2.192432 -2.550657 -5.049625 -1.690603 3.270088 -6.798125 -9.664414 -5.007550 8.892717 -1.866879 -7.838891 -8.385690 12.423049 -12.961901 -2.690573 0.403938 -8.277641 -9.329019 4.875175 13.031075 2.876149 -8.183126 7.136222 -11.633527 5.738589 6.368529 -2.182592 12.643470 -6.179668 -3.063135 6.012800 -1.424694 -11.121333 -4.386300 9.246586 5.169528 9.826102 10.018805 11.532512 -0.198657 -12.941704 4.630060 -2.020521 9.950098 9.899041 1.594326 -8.794597 1.047233 3.355342 7.699087 8.320254 -7.552447 -3.140688 4.239331 11.105561 7.692445 -10.842819 -3.607115 -2.172436 -1.441410 -5.245396 8.159334 0.377200 9.941782 3.262352 -0.211165 -1.053061 3.189934 3.329045 0.917027 -2.096736 4.859781 -11.754062 14.670359 7.750272 0.997401 -3.887362 4.777499 -6.292695 10.290854 -2.559951 -9.294128 12.454881 2.936930 8.395383 5.350695 -2.698746 -8.489400 -2.481328 5.475759 3.661727 8.944526 2.530678 -8.525270 -6.696853 -7.111981 9.161655 -4.808249 -5.988928 -1.557738 14.460289 -6.351083 -3.631214 0.446705 12.285727 -1.060022 0.527279 
+coarse centroid [9]:48.925941 57.260815 62.922653 57.068085 42.004440 56.396877 53.503536 48.503555 46.834999 43.179276 52.827003 52.377705 41.315758 50.098679 58.278538 52.287064 52.754501 34.757107 53.015629 54.971737 57.062630 41.098270 60.895126 51.259224 40.031124 54.912239 41.939693 52.381683 54.650993 59.535629 53.078342 46.016186 54.655476 51.803513 50.001541 51.124977 43.870659 64.146637 60.092800 48.025307 40.648281 53.820248 70.745117 54.697327 46.315582 36.162777 43.301125 35.559689 41.298981 55.632072 45.309929 57.138523 47.071651 38.989483 41.039902 61.055538 50.836903 48.247166 44.244305 58.084846 45.661587 56.648853 42.729534 42.640232 63.457840 35.420181 56.996624 60.987450 51.260254 58.801636 58.096695 42.518173 52.257195 47.543423 51.417637 50.139645 53.653790 51.205238 52.160751 40.522572 54.199455 39.338642 54.849583 42.146496 47.101620 50.278248 46.901432 44.584503 58.078842 41.549786 47.035023 41.230949 50.612900 55.474586 51.856655 46.896061 47.164379 50.535721 53.035645 46.222664 56.839146 51.665035 44.862156 41.069687 47.694527 41.703514 59.935143 46.098354 56.081589 50.471592 47.307175 53.595551 44.470795 47.124283 54.456024 55.474594 36.183521 41.423557 53.315609 47.316216 38.839706 50.267879 46.443558 45.489086 61.253532 43.714199 46.059704 52.525703 
+fine centroid [9]:-5.484884 -1.113699 0.928814 -5.216512 -11.624371 6.626887 -1.372233 -2.623525 6.239235 -12.199043 0.838583 12.263740 16.889807 3.106076 6.008498 -3.643096 5.540881 -8.875162 -2.635643 13.370481 -2.404100 6.611892 9.134011 9.806414 2.811218 7.273590 -12.142168 2.277228 6.205105 6.442465 -5.209690 -9.663783 -7.949430 6.056646 15.773265 -9.101449 -4.354317 1.408382 -8.812881 1.800682 -2.708841 4.792387 8.070963 -4.973576 -4.579510 -6.848602 -12.617006 2.900384 14.030934 3.107855 6.394447 4.348794 -5.451979 -4.076171 -8.750478 -2.654218 1.194601 1.706859 -14.429050 -1.553600 -12.868852 3.327018 -2.009471 -5.004796 0.536312 0.730245 4.974700 -8.616576 0.649351 8.076832 -7.324742 -9.205213 -1.780990 3.541611 9.186941 5.656622 -3.027782 -6.797653 -11.433121 -5.855865 -5.456631 -0.462347 -7.496909 1.642002 -0.931376 0.381344 0.243824 8.039281 -3.899329 -6.607687 9.057699 4.178772 0.408555 -9.956219 -0.668636 -5.725643 -10.189344 0.262043 4.726765 -3.883787 -7.681562 3.881990 -2.002764 17.005270 -6.269158 -5.302007 7.100533 -2.494144 20.655777 3.122891 -7.526464 -1.868234 2.077642 -2.897074 0.718115 3.536263 5.782546 0.934781 -8.667078 -6.061821 8.060072 -3.161158 -3.586204 -1.066903 -3.710392 -5.495247 -7.363913 0.404819 
+Building index with 100000 build vectors.
+dataset0 : coarseId=0, fineId=42
+dataset1 : coarseId=42, fineId=42
+dataset2 : coarseId=29, fineId=42
+dataset3 : coarseId=70, fineId=53
+dataset4 : coarseId=95, fineId=13
+dataset5 : coarseId=91, fineId=42
+dataset6 : coarseId=22, fineId=42
+dataset7 : coarseId=60, fineId=42
+dataset8 : coarseId=86, fineId=14
+dataset9 : coarseId=42, fineId=40
+dataset10 : coarseId=84, fineId=40
+dataset11 : coarseId=0, fineId=53
+dataset12 : coarseId=86, fineId=53
+dataset13 : coarseId=51, fineId=63
+dataset14 : coarseId=24, fineId=13
+dataset15 : coarseId=71, fineId=42
+dataset16 : coarseId=94, fineId=42
+dataset17 : coarseId=44, fineId=38
+dataset18 : coarseId=68, fineId=42
+dataset19 : coarseId=13, fineId=91
+dataset20 : coarseId=8, fineId=13
+dataset21 : coarseId=24, fineId=42
+dataset22 : coarseId=46, fineId=88
+dataset23 : coarseId=26, fineId=61
+dataset24 : coarseId=2, fineId=42
+dataset25 : coarseId=7, fineId=63
+dataset26 : coarseId=99, fineId=42
+dataset27 : coarseId=55, fineId=19
+dataset28 : coarseId=32, fineId=63
+dataset29 : coarseId=40, fineId=55
+dataset30 : coarseId=25, fineId=13
+dataset31 : coarseId=87, fineId=42
+dataset32 : coarseId=92, fineId=42
+dataset33 : coarseId=76, fineId=13
+dataset34 : coarseId=78, fineId=42
+dataset35 : coarseId=12, fineId=42
+dataset36 : coarseId=9, fineId=13
+dataset37 : coarseId=37, fineId=63
+dataset38 : coarseId=40, fineId=42
+dataset39 : coarseId=72, fineId=42
+dataset40 : coarseId=78, fineId=13
+dataset41 : coarseId=47, fineId=42
+dataset42 : coarseId=11, fineId=38
+dataset43 : coarseId=91, fineId=42
+dataset44 : coarseId=62, fineId=42
+dataset45 : coarseId=87, fineId=42
+dataset46 : coarseId=60, fineId=38
+dataset47 : coarseId=16, fineId=55
+dataset48 : coarseId=86, fineId=42
+dataset49 : coarseId=14, fineId=8
+dataset50 : coarseId=56, fineId=12
+dataset51 : coarseId=30, fineId=13
+dataset52 : coarseId=35, fineId=13
+dataset53 : coarseId=92, fineId=8
+dataset54 : coarseId=19, fineId=42
+dataset55 : coarseId=9, fineId=42
+dataset56 : coarseId=8, fineId=99
+dataset57 : coarseId=8, fineId=80
+dataset58 : coarseId=61, fineId=63
+dataset59 : coarseId=33, fineId=63
+dataset60 : coarseId=16, fineId=42
+dataset61 : coarseId=99, fineId=42
+dataset62 : coarseId=5, fineId=38
+dataset63 : coarseId=53, fineId=38
+dataset64 : coarseId=91, fineId=53
+dataset65 : coarseId=80, fineId=38
+dataset66 : coarseId=39, fineId=53
+dataset67 : coarseId=93, fineId=61
+dataset68 : coarseId=98, fineId=13
+dataset69 : coarseId=98, fineId=76
+dataset70 : coarseId=1, fineId=63
+dataset71 : coarseId=60, fineId=57
+dataset72 : coarseId=60, fineId=19
+dataset73 : coarseId=53, fineId=63
+dataset74 : coarseId=76, fineId=63
+dataset75 : coarseId=16, fineId=42
+dataset76 : coarseId=76, fineId=55
+dataset77 : coarseId=14, fineId=63
+dataset78 : coarseId=96, fineId=53
+dataset79 : coarseId=30, fineId=42
+dataset80 : coarseId=72, fineId=76
+dataset81 : coarseId=54, fineId=63
+dataset82 : coarseId=60, fineId=63
+dataset83 : coarseId=37, fineId=88
+dataset84 : coarseId=64, fineId=19
+dataset85 : coarseId=22, fineId=88
+dataset86 : coarseId=28, fineId=8
+dataset87 : coarseId=8, fineId=40
+dataset88 : coarseId=14, fineId=40
+dataset89 : coarseId=32, fineId=38
+dataset90 : coarseId=97, fineId=12
+dataset91 : coarseId=57, fineId=38
+dataset92 : coarseId=22, fineId=72
+dataset93 : coarseId=57, fineId=8
+dataset94 : coarseId=57, fineId=63
+dataset95 : coarseId=62, fineId=13
+dataset96 : coarseId=37, fineId=42
+dataset97 : coarseId=42, fineId=63
+dataset98 : coarseId=55, fineId=8
+dataset99 : coarseId=50, fineId=12
+
+Searching with 10000 queries.
+query0 : coarseId=10, fineId=63
+query1 : coarseId=55, fineId=12
+query2 : coarseId=33, fineId=63
+query3 : coarseId=66, fineId=42
+query4 : coarseId=55, fineId=63
+query5 : coarseId=42, fineId=13
+query6 : coarseId=92, fineId=42
+query7 : coarseId=45, fineId=8
+query8 : coarseId=58, fineId=42
+query9 : coarseId=45, fineId=53
+query10 : coarseId=85, fineId=13
+query11 : coarseId=98, fineId=42
+query12 : coarseId=12, fineId=12
+query13 : coarseId=99, fineId=63
+query14 : coarseId=11, fineId=42
+query15 : coarseId=79, fineId=38
+query16 : coarseId=16, fineId=74
+query17 : coarseId=64, fineId=13
+query18 : coarseId=94, fineId=42
+query19 : coarseId=61, fineId=63
+query20 : coarseId=62, fineId=8
+query21 : coarseId=60, fineId=14
+query22 : coarseId=76, fineId=42
+query23 : coarseId=91, fineId=42
+query24 : coarseId=53, fineId=42
+query25 : coarseId=84, fineId=40
+query26 : coarseId=44, fineId=42
+query27 : coarseId=51, fineId=53
+query28 : coarseId=80, fineId=38
+query29 : coarseId=81, fineId=92
+query30 : coarseId=43, fineId=13
+query31 : coarseId=61, fineId=13
+query32 : coarseId=38, fineId=74
+query33 : coarseId=34, fineId=13
+query34 : coarseId=94, fineId=63
+query35 : coarseId=97, fineId=74
+query36 : coarseId=38, fineId=53
+query37 : coarseId=37, fineId=13
+query38 : coarseId=82, fineId=42
+query39 : coarseId=25, fineId=42
+query40 : coarseId=56, fineId=13
+query41 : coarseId=40, fineId=63
+query42 : coarseId=32, fineId=42
+query43 : coarseId=6, fineId=63
+query44 : coarseId=23, fineId=55
+query45 : coarseId=53, fineId=12
+query46 : coarseId=37, fineId=63
+query47 : coarseId=97, fineId=12
+query48 : coarseId=64, fineId=42
+query49 : coarseId=22, fineId=63
+query50 : coarseId=10, fineId=13
+query51 : coarseId=15, fineId=74
+query52 : coarseId=51, fineId=98
+query53 : coarseId=5, fineId=63
+query54 : coarseId=6, fineId=13
+query55 : coarseId=93, fineId=12
+query56 : coarseId=54, fineId=42
+query57 : coarseId=62, fineId=40
+query58 : coarseId=94, fineId=63
+query59 : coarseId=4, fineId=42
+query60 : coarseId=63, fineId=61
+query61 : coarseId=52, fineId=42
+query62 : coarseId=13, fineId=13
+query63 : coarseId=23, fineId=42
+query64 : coarseId=68, fineId=63
+query65 : coarseId=9, fineId=38
+query66 : coarseId=48, fineId=63
+query67 : coarseId=23, fineId=42
+query68 : coarseId=26, fineId=13
+query69 : coarseId=40, fineId=13
+query70 : coarseId=21, fineId=74
+query71 : coarseId=35, fineId=42
+query72 : coarseId=8, fineId=63
+query73 : coarseId=54, fineId=12
+query74 : coarseId=47, fineId=8
+query75 : coarseId=69, fineId=63
+query76 : coarseId=38, fineId=13
+query77 : coarseId=79, fineId=50
+query78 : coarseId=79, fineId=53
+query79 : coarseId=26, fineId=63
+query80 : coarseId=15, fineId=13
+query81 : coarseId=50, fineId=53
+query82 : coarseId=43, fineId=42
+query83 : coarseId=46, fineId=34
+query84 : coarseId=76, fineId=42
+query85 : coarseId=9, fineId=19
+query86 : coarseId=19, fineId=40
+query87 : coarseId=11, fineId=63
+query88 : coarseId=16, fineId=63
+query89 : coarseId=3, fineId=53
+query90 : coarseId=77, fineId=63
+query91 : coarseId=75, fineId=75
+query92 : coarseId=60, fineId=38
+query93 : coarseId=24, fineId=13
+query94 : coarseId=99, fineId=63
+query95 : coarseId=69, fineId=53
+query96 : coarseId=23, fineId=42
+query97 : coarseId=84, fineId=55
+query98 : coarseId=57, fineId=53
+query99 : coarseId=17, fineId=12
+Search results:
+Query 0: Coarse index = 10, Fine index = 63
+Query 1: Coarse index = 55, Fine index = 12
+Query 2: Coarse index = 33, Fine index = 63
+Query 3: Coarse index = 66, Fine index = 42
+Query 4: Coarse index = 55, Fine index = 63
+Query 5: Coarse index = 42, Fine index = 13
+Query 6: Coarse index = 92, Fine index = 42
+Query 7: Coarse index = 45, Fine index = 8
+Query 8: Coarse index = 58, Fine index = 42
+Query 9: Coarse index = 45, Fine index = 53
+Query 10: Coarse index = 85, Fine index = 13
+Query 11: Coarse index = 98, Fine index = 42
+Query 12: Coarse index = 12, Fine index = 12
+Query 13: Coarse index = 99, Fine index = 63
+Query 14: Coarse index = 11, Fine index = 42
+Query 15: Coarse index = 79, Fine index = 38
+Query 16: Coarse index = 16, Fine index = 74
+Query 17: Coarse index = 64, Fine index = 13
+Query 18: Coarse index = 94, Fine index = 42
+Query 19: Coarse index = 61, Fine index = 63
+Query 20: Coarse index = 62, Fine index = 8
+Query 21: Coarse index = 60, Fine index = 14
+Query 22: Coarse index = 76, Fine index = 42
+Query 23: Coarse index = 91, Fine index = 42
+Query 24: Coarse index = 53, Fine index = 42
+Query 25: Coarse index = 84, Fine index = 40
+Query 26: Coarse index = 44, Fine index = 42
+Query 27: Coarse index = 51, Fine index = 53
+Query 28: Coarse index = 80, Fine index = 38
+Query 29: Coarse index = 81, Fine index = 92
+Query 30: Coarse index = 43, Fine index = 13
+Query 31: Coarse index = 61, Fine index = 13
+Query 32: Coarse index = 38, Fine index = 74
+Query 33: Coarse index = 34, Fine index = 13
+Query 34: Coarse index = 94, Fine index = 63
+Query 35: Coarse index = 97, Fine index = 74
+Query 36: Coarse index = 38, Fine index = 53
+Query 37: Coarse index = 37, Fine index = 13
+Query 38: Coarse index = 82, Fine index = 42
+Query 39: Coarse index = 25, Fine index = 42
+Query 40: Coarse index = 56, Fine index = 13
+Query 41: Coarse index = 40, Fine index = 63
+Query 42: Coarse index = 32, Fine index = 42
+Query 43: Coarse index = 6, Fine index = 63
+Query 44: Coarse index = 23, Fine index = 55
+Query 45: Coarse index = 53, Fine index = 12
+Query 46: Coarse index = 37, Fine index = 63
+Query 47: Coarse index = 97, Fine index = 12
+Query 48: Coarse index = 64, Fine index = 42
+Query 49: Coarse index = 22, Fine index = 63
+Query 50: Coarse index = 10, Fine index = 13
+Query 51: Coarse index = 15, Fine index = 74
+Query 52: Coarse index = 51, Fine index = 98
+Query 53: Coarse index = 5, Fine index = 63
+Query 54: Coarse index = 6, Fine index = 13
+Query 55: Coarse index = 93, Fine index = 12
+Query 56: Coarse index = 54, Fine index = 42
+Query 57: Coarse index = 62, Fine index = 40
+Query 58: Coarse index = 94, Fine index = 63
+Query 59: Coarse index = 4, Fine index = 42
+Query 60: Coarse index = 63, Fine index = 61
+Query 61: Coarse index = 52, Fine index = 42
+Query 62: Coarse index = 13, Fine index = 13
+Query 63: Coarse index = 23, Fine index = 42
+Query 64: Coarse index = 68, Fine index = 63
+Query 65: Coarse index = 9, Fine index = 38
+Query 66: Coarse index = 48, Fine index = 63
+Query 67: Coarse index = 23, Fine index = 42
+Query 68: Coarse index = 26, Fine index = 13
+Query 69: Coarse index = 40, Fine index = 13
+Query 70: Coarse index = 21, Fine index = 74
+Query 71: Coarse index = 35, Fine index = 42
+Query 72: Coarse index = 8, Fine index = 63
+Query 73: Coarse index = 54, Fine index = 12
+Query 74: Coarse index = 47, Fine index = 8
+Query 75: Coarse index = 69, Fine index = 63
+Query 76: Coarse index = 38, Fine index = 13
+Query 77: Coarse index = 79, Fine index = 50
+Query 78: Coarse index = 79, Fine index = 53
+Query 79: Coarse index = 26, Fine index = 63
+Query 80: Coarse index = 15, Fine index = 13
+Query 81: Coarse index = 50, Fine index = 53
+Query 82: Coarse index = 43, Fine index = 42
+Query 83: Coarse index = 46, Fine index = 34
+Query 84: Coarse index = 76, Fine index = 42
+Query 85: Coarse index = 9, Fine index = 19
+Query 86: Coarse index = 19, Fine index = 40
+Query 87: Coarse index = 11, Fine index = 63
+Query 88: Coarse index = 16, Fine index = 63
+Query 89: Coarse index = 3, Fine index = 53
+Query 90: Coarse index = 77, Fine index = 63
+Query 91: Coarse index = 75, Fine index = 75
+Query 92: Coarse index = 60, Fine index = 38
+Query 93: Coarse index = 24, Fine index = 13
+Query 94: Coarse index = 99, Fine index = 63
+Query 95: Coarse index = 69, Fine index = 53
+Query 96: Coarse index = 23, Fine index = 42
+Query 97: Coarse index = 84, Fine index = 55
+Query 98: Coarse index = 57, Fine index = 53
+Query 99: Coarse index = 17, Fine index = 12
+RVQ object destroyed.

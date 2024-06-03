@@ -3,6 +3,8 @@
 #include "selectMin1.cuh"
 
 // CUDA kernel函数，用于在每个段中查找最小值的索引
+// c : 每段的大小
+// num : 段数
 __global__ void findMinIndicesKernel(const float* values, int c, int num, int* minIndices) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < num) {

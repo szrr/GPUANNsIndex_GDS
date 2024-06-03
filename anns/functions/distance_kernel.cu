@@ -225,11 +225,9 @@ void RunSumAlongRows(val_t *input, val_t *output, num_t m, num_t n) {
 }
 
 // x^2+y^2-2xy
-void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
-                         num_t query_num, num_t dim, val_t *dis_matrix,
-                         const num_t ChunkSize) {
-
-    // TODO: compute queries
+void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data, num_t query_num, num_t dim, val_t *dis_matrix, const num_t ChunkSize) {
+    // printf("[Info] distance calculation on %d centroids and %d quries\n", base_num, query_num);
+    // compute queries
     val_t *d_query_data;
     CUDA_CHECK(
         cudaMalloc((void **)&d_query_data, sizeof(val_t) * query_num * dim));
@@ -251,11 +249,11 @@ void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
 
     // TODO: result matrix is too large, so we split the base data to multiple
     // chunks
-    printf("Base data chunk size = %d\n", ChunkSize);
+    // printf("Base data chunk size = %d\n", ChunkSize);
     num_t chunks = (base_num + ChunkSize - 1) / ChunkSize;
-    printf("Chunks = %d\n", chunks);
+    // printf("Chunks = %d\n", chunks);
     for (num_t chunk = 0; chunk < chunks; chunk++) {
-        printf("Start %d iteration...\n", chunk);
+        // printf("Start %d iteration...\n", chunk);
         size_t base_start = chunk * ChunkSize;
         size_t base_size =
             ((base_start + ChunkSize < base_num) ? ChunkSize
