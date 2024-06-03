@@ -1,7 +1,7 @@
 # GPUANNsIndex_GDS
 
 ## update functions using cuda kernel  
-### done  
+### done
 Distance calculation: `anns/functions/distance_kernel.cu`  
 Select min 1 : `anns/functions/selectMin1.cu`  
   
@@ -9,6 +9,11 @@ Select min 1 : `anns/functions/selectMin1.cu`
 Select min k: `anns/functions/Kselect.cu`  
 
 ## update index
-### done  
+### done
 Two layer RVQ index: `anns/RVQ.cpp`  
-test RVQ: `nvcc -o rvq RVQ.cpp ./functions/distance_kernel.cu ./functions/selectMin1.cu -lcublas -lmkl_rt`  
+test RVQ: `cd anns` `nvcc -o rvq RVQ.cpp ./functions/distance_kernel.cu ./functions/selectMin1.cu -lcublas -lmkl_rt`  
+  
+### under going
+Fuse three-layer index  
+
+## BaM data transfer
