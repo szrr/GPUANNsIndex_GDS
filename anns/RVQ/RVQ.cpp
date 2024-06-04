@@ -18,9 +18,9 @@
 // #include </usr/include/mkl/mkl.h>
 // #include </usr/include/mkl/mkl_service.h>
 #include "RVQ.h"
-#include "common.h"
-#include "functions/distance_kernel.cuh"
-#include "functions/selectMin1.cuh"
+#include "../common.h"
+#include "../functions/distance_kernel.cuh"
+#include "../functions/selectMin1.cuh"
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign) {
     float error = 0.0;

@@ -11,7 +11,7 @@
 // #include <mkl_cblas.h>
 // #include <mkl.h>
 // #include <mkl_service.h>
-#include "common.h"
+#include "../common.h"
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign);
 
