@@ -10,8 +10,8 @@ Select min k: `anns/functions/Kselect.cu`
 
 ## Three-layer index
 ### done
-Two layer RVQ index: `anns/RVQ.cpp`  
-test RVQ: `cd anns` `nvcc -o rvq RVQ.cpp ./functions/distance_kernel.cu ./functions/selectMin1.cu -lcublas -lmkl_rt`  
+Two layer RVQ index: `anns/RVQ/RVQ.cpp`  
+test RVQ: `cd anns` `nvcc -o rvq RVQ.cpp ../functions/distance_kernel.cu ../functions/selectMin1.cu -lcublas -lmkl_rt`  
   
 ### under going
 Fuse three-layer index  
