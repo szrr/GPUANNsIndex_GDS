@@ -53,6 +53,6 @@ Notice the parameters ```dim``` and ```metric``` that are provided to generate q
 Otherwise, the executable program may shut down, or the recall (resp. the quality of proximity graph) may be poor.
 
 ## Datasets
-Base: /mnt/data1/szr/dataset/sift1b/bigann_base.bvecs          the size of bigann_base.bvecs is 1 billion\
+Base: /mnt/data1/szr/dataset/sift1b/bigann_base.bvecs          &emsp;the size of bigann_base.bvecs is 1 billion\
 Query: /mnt/data1/szr/dataset/sift1b/bigann_query.bvecs\
-Ground Truth: /mnt/data1/szr/dataset/sift1b/gnd/idx_'x'M.ivecs  'x' is the size of dataset like /mnt/data1/szr/dataset/sift1b/gnd/idx_5M.ivecs
+Ground Truth: /mnt/data1/szr/dataset/sift1b/gnd/idx_'x'M.ivecs  &emsp;'x' is the size of dataset like /mnt/data1/szr/dataset/sift1b/gnd/idx_5M.ivecs
