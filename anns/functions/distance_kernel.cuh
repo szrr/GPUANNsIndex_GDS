@@ -14,8 +14,8 @@
 #define __global__
 #endif
 
-// 声明 QueryToBaseDistance 函数
-void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
+// 声明 queryToBaseDistance 函数
+void queryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
                          num_t query_num, num_t dim, val_t *dis_matrix,
                          const num_t ChunkSize = 100000);
 

@@ -225,7 +225,7 @@ void RunSumAlongRows(val_t *input, val_t *output, num_t m, num_t n) {
 }
 
 // x^2+y^2-2xy
-void QueryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data, num_t query_num, num_t dim, val_t *dis_matrix, const num_t ChunkSize) {
+void queryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data, num_t query_num, num_t dim, val_t *dis_matrix, const num_t ChunkSize) {
     // printf("[Info] distance calculation on %d centroids and %d quries\n", base_num, query_num);
     // compute queries
     val_t *d_query_data;
@@ -345,7 +345,7 @@ void printMatrix(const char* name, const float* matrix, int rows, int cols) {
 
 //     // Call the function under test
 //     int chunk = std::min(base_num, 1000000);
-//     QueryToBaseDistance(base_data, base_num, query_data, query_num, dim, dis_matrix, chunk);
+//     queryToBaseDistance(base_data, base_num, query_data, query_num, dim, dis_matrix, chunk);
 
 //     // Print the results
 //     // printMatrix("Distance Matrix", dis_matrix, query_num, base_num);

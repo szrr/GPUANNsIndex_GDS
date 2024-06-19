@@ -23,7 +23,7 @@ __global__ void findMinIndicesKernel(const float* values, int c, int num, int* m
 }
 
 // 主机函数，调用CUDA kernel函数并将结果复制回主机内存
-std::vector<int> findMinIndicesCUDA(const float* values, int c, int num) {
+std::vector<int> findMinIndices(const float* values, int c, int num) {
     int totalNum = num;
     std::vector<int> minIndices(totalNum, 0); // 初始化为0
 
@@ -56,7 +56,7 @@ std::vector<int> findMinIndicesCUDA(const float* values, int c, int num) {
 //     int num = 4;
 
 //     // 使用CUDA加速查找每段中的最小值索引
-//     std::vector<int> minIndices = findMinIndicesCUDA(values.data(), c, num);
+//     std::vector<int> minIndices = findMinIndices(values.data(), c, num);
 
 //     // 打印结果
 //     std::cout << "Minimum indices in each segment:" << std::endl;

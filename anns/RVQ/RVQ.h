@@ -46,7 +46,7 @@ public:
     void build(float* buildVectorData, idx_t numVectors) ;
 
     // 查询搜索
-    void search(float* query, int numQueries, std::vector<std::pair<int, int>>& res);
+    void search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res);
 
 public:
     int dim_; // 特征向量维度

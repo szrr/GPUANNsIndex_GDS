@@ -164,10 +164,10 @@ float Kmeans (float* trainData, idx_t numTrainData, int dim, float* codebook, in
     for (int i = 0; i < iter; ++i) {
         printf("Training iteration %d. ", i);
         // distance calculation
-        QueryToBaseDistance(centroids, numCentroids, trainData, numTrainData, dim, disMatrix);
+        queryToBaseDistance(centroids, numCentroids, trainData, numTrainData, dim, disMatrix);
 
         // find the nearest centroids of data points
-        minCentroids = findMinIndicesCUDA(disMatrix,  numCentroids, numTrainData);
+        minCentroids = findMinIndices(disMatrix,  numCentroids, numTrainData);
         // // 验证
         // std::vector<int> cpuResults = findMinIndicesCPU(disMatrix, numCentroids, numTrainData);
         // for (int i = 0; i < numTrainData; ++i) {
@@ -328,11 +328,11 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
 
     // 计算与粗聚类中心距离
     float* disMatrixCoarse = new float[numVectors * numCoarseCentroid_];
-    QueryToBaseDistance(coarseCodebook_, numCoarseCentroid_, buildVectorData,
+    queryToBaseDistance(coarseCodebook_, numCoarseCentroid_, buildVectorData,
                          numVectors, dim_, disMatrixCoarse, 100000);
     
     // 得到最近的粗聚类中心
-    std::vector<int> minCoarseIndices = findMinIndicesCUDA(disMatrixCoarse, numCoarseCentroid_, numVectors);
+    std::vector<int> minCoarseIndices = findMinIndices(disMatrixCoarse, numCoarseCentroid_, numVectors);
     
     // 计算残差
     std::unique_ptr<float[]> FineData(new float[numVectors * dim_]);
@@ -345,9 +345,9 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
 
     // 得到最近的细聚类中心
     float* disMatrixFine = new float[numVectors * numFineCentroid_];
-    QueryToBaseDistance(fineCodebook_, numFineCentroid_, buildVectorData,
+    queryToBaseDistance(fineCodebook_, numFineCentroid_, buildVectorData,
                          numVectors, dim_, disMatrixFine, 100000);
-    std::vector<int> minFineIndices = findMinIndicesCUDA(disMatrixFine, numFineCentroid_, numVectors);
+    std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numVectors);
 
     // 加入反向列表
     for(idx_t i = 0; i < numVectors; ++i){
@@ -360,16 +360,16 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
 }
 
 // 查询搜索
-void RVQ::search(float* query, int numQueries, std::vector<std::pair<int, int>>& res) {
+void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
 
     // 计算与粗聚类中心距离
     float* disMatrixCoarse = new float[numQueries * numCoarseCentroid_];
-    QueryToBaseDistance(coarseCodebook_, numCoarseCentroid_, query,
+    queryToBaseDistance(coarseCodebook_, numCoarseCentroid_, query,
                          numQueries, dim_, disMatrixCoarse, 100000);
     
     // 得到最近的粗聚类中心
-    std::vector<int> minCoarseIndices = findMinIndicesCUDA(disMatrixCoarse, numCoarseCentroid_, numQueries);
+    std::vector<int> minCoarseIndices = findMinIndices(disMatrixCoarse, numCoarseCentroid_, numQueries);
     
     // 计算残差
     std::unique_ptr<float[]> FineData(new float[numQueries * dim_]);
@@ -382,13 +382,13 @@ void RVQ::search(float* query, int numQueries, std::vector<std::pair<int, int>>&
 
     // 得到最近的细聚类中心
     float* disMatrixFine = new float[numQueries * numFineCentroid_];
-    QueryToBaseDistance(fineCodebook_, numFineCentroid_, query,
+    queryToBaseDistance(fineCodebook_, numFineCentroid_, query,
                          numQueries, dim_, disMatrixFine, 100000);
-    std::vector<int> minFineIndices = findMinIndicesCUDA(disMatrixFine, numFineCentroid_, numQueries);
+    std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numQueries);
 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
     for(idx_t i = 0; i < numQueries; ++i){
-        res.push_back(std::make_pair(minCoarseIndices[i], minFineIndices[i]));
+        res.push_back(index[minCoarseIndices[i]][minFineIndices[i]]);
         // if (i < 100){
         //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
         // }
@@ -405,54 +405,54 @@ void fillWithRandom(float* data, int size) {
     }
 }
 
-int main() {
-    // Define parameters
-    int dim = 128; // Dimension of feature vectors
-    int numCoarseCentroids = 100; // Number of coarse centroids
-    int numFineCentroids = 100; // Number of fine centroids
-    int numTrainVectors = 100000; // Number of training vectors
-    int numQueries = 10000; // Number of query vectors
+// int main() {
+//     // Define parameters
+//     int dim = 128; // Dimension of feature vectors
+//     int numCoarseCentroids = 100; // Number of coarse centroids
+//     int numFineCentroids = 100; // Number of fine centroids
+//     int numTrainVectors = 100000; // Number of training vectors
+//     int numQueries = 10000; // Number of query vectors
 
-    // Generate random training data and query data
-    float* trainData = new float[numTrainVectors * dim];
-    float* queryData = new float[numQueries * dim];
-    fillWithRandom(trainData, numTrainVectors * dim);
-    fillWithRandom(queryData, numQueries * dim);
+//     // Generate random training data and query data
+//     float* trainData = new float[numTrainVectors * dim];
+//     float* queryData = new float[numQueries * dim];
+//     fillWithRandom(trainData, numTrainVectors * dim);
+//     fillWithRandom(queryData, numQueries * dim);
 
-    // Create RVQ object
-    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+//     // Create RVQ object
+//     RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
 
-    // Train RVQ
-    rvq.train(trainData, numTrainVectors);
+//     // Train RVQ
+//     rvq.train(trainData, numTrainVectors);
 
-    for(int i = 0; i < 10; ++i){
-        printf("coarse centroid [%d]:", i);
-        for(int j = 0; j < dim; j++){
-            printf("%f ", rvq.coarseCodebook_[i*dim + j]);
-        }
-        printf("\nfine centroid [%d]:", i);
-        for(int j = 0; j < dim; j++){
-            printf("%f ", rvq.fineCodebook_[i*dim + j]);
-        }
-        printf("\n");
-    }
+//     for(int i = 0; i < 10; ++i){
+//         printf("coarse centroid [%d]:", i);
+//         for(int j = 0; j < dim; j++){
+//             printf("%f ", rvq.coarseCodebook_[i*dim + j]);
+//         }
+//         printf("\nfine centroid [%d]:", i);
+//         for(int j = 0; j < dim; j++){
+//             printf("%f ", rvq.fineCodebook_[i*dim + j]);
+//         }
+//         printf("\n");
+//     }
 
-    // Build reverse index
-    rvq.build(trainData, numTrainVectors);
+//     // Build reverse index
+//     rvq.build(trainData, numTrainVectors);
 
-    // Search using queries
-    std::vector<std::pair<int, int>> results;
-    rvq.search(queryData, numQueries, results);
+//     // Search using queries
+//     std::vector<std::pair<int, int>> results;
+//     rvq.search(queryData, numQueries, results);
 
-    // Display search results
-    std::cout << "Search results:" << std::endl;
-    for (int i = 0; i < 100; ++i) {
-        std::cout << "Query " << i << ": Coarse index = " << results[i].first << ", Fine index = " << results[i].second << std::endl;
-    }
+//     // Display search results
+//     std::cout << "Search results:" << std::endl;
+//     for (int i = 0; i < 100; ++i) {
+//         std::cout << "Query " << i << ": Coarse index = " << results[i].first << ", Fine index = " << results[i].second << std::endl;
+//     }
 
-    // Clean up
-    delete[] trainData;
-    delete[] queryData;
+//     // Clean up
+//     delete[] trainData;
+//     delete[] queryData;
 
-    return 0;
-}
+//     return 0;
+// }
