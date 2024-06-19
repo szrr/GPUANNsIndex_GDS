@@ -234,6 +234,10 @@ float Kmeans (float* trainData, idx_t numTrainData, int dim, float* codebook, in
     return minErr;
 }
 
+std::vector<std::vector<std::vector<idx_t>>> RVQ::get_index(){
+    return index_;
+}
+
 // 训练粗略量化码本
 void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     std::cout << "Training input : " << numTrainVectors << " vectors." << std::endl;
@@ -351,7 +355,7 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
 
     // 加入反向列表
     for(idx_t i = 0; i < numVectors; ++i){
-        index[minCoarseIndices[i]][minFineIndices[i]].push_back(i);
+        index_[minCoarseIndices[i]][minFineIndices[i]].push_back(i);
         if (i < 100) {
             printf("dataset%d : coarseId=%d, fineId=%d\n", i, minCoarseIndices[i], minFineIndices[i]);
         }
@@ -388,7 +392,7 @@ void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& 
 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
     for(idx_t i = 0; i < numQueries; ++i){
-        res.push_back(index[minCoarseIndices[i]][minFineIndices[i]]);
+        res.push_back(index_[minCoarseIndices[i]][minFineIndices[i]]);
         // if (i < 100){
         //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
         // }

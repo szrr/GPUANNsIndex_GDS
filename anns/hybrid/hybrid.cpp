@@ -16,7 +16,8 @@ void hybrid::train(float* trainVectorData, num_t numTrainVectors){
 
 void hybrid::build(float* buildVectorData, num_t numVectors){
     rvq->build(buildVectorData, numVectors);
-    graph->build(buildVectorData, numVectors); // add graph build
+    std::vector<std::vector<std::vector<idx_t>>> rvqIndex = rvq->get_index(); // get rvq two layer index
+    graph->build(buildVectorData, numVectors, rvqIndex); // add graph build
 }
 
 void hybrid::search(float* queries, int numQueries, std::vector<std::vector<idx_t>>& res){

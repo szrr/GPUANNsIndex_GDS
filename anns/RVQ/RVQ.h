@@ -23,11 +23,11 @@ public:
         coarseCodebook_ = new float[dim * numCoarseCentroids];
         fineCodebook_ = new float[dim * numFineCentroids];
         std::cout << "RVQ index created.\nDimensions = " << dim << ", Coarse Centroids = " << numCoarseCentroids << ", Fine Centroids = " << numFineCentroids << std::endl;
-        index.resize(numCoarseCentroids);
+        index_.resize(numCoarseCentroids);
         for (int i = 0; i < numCoarseCentroids; ++i) {
-            index[i].resize(numFineCentroids);
+            index_[i].resize(numFineCentroids);
             for (int j = 0; j < numFineCentroids; ++j) {
-                index[i][j].resize(0);
+                index_[i][j].resize(0);
             }
         }
     }
@@ -48,11 +48,13 @@ public:
     // 查询搜索
     void search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res);
 
-public:
+    std::vector<std::vector<std::vector<idx_t>>> get_index();
+
+private:
     int dim_; // 特征向量维度
     float* coarseCodebook_; // 粗码本
     int numCoarseCentroid_; // 粗略码本中心点数量
     float* fineCodebook_; // 细码本
     int numFineCentroid_; // 精细码本中心点数量
-    std::vector<std::vector<std::vector<idx_t>>> index;
+    std::vector<std::vector<std::vector<idx_t>>> index_;
 };
