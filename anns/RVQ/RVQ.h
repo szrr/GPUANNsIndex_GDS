@@ -14,6 +14,8 @@
 #include "../common.h"
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign);
+void rand_perm(int* perm, size_t n, int64_t seed);
+void fillWithRandom(float* data, int size);
 
 class RVQ {
 public:
@@ -47,6 +49,9 @@ public:
 
     // 查询搜索
     void search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res);
+
+    void save(const std::string& filename);
+    void load(const std::string& filename);
 
     std::vector<std::vector<std::vector<idx_t>>> get_index();
 
