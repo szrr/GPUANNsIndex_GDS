@@ -323,7 +323,13 @@ std::vector<std::vector<std::vector<idx_t>>> RVQ::get_index(){
 // 训练粗略量化码本
 void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     std::cout << "Training input : " << numTrainVectors << " vectors." << std::endl;
-
+    // for(int i = 0; i<numTrainVectors; i++){
+    //     std::cout<<i<<std::endl;
+    //     for(int l=0; l<128; l++){
+    //         std::cout<<trainVectorData[i*128 + l]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
     // 采样训练点，不超过10w
     idx_t numSelectTrainVec = 100000;
     // 检查输入参数是否有效
@@ -449,14 +455,22 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
 void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
 
+    Timer queryT;
+    queryT.Start();
     // 计算与粗聚类中心距离
     float* disMatrixCoarse = new float[numQueries * numCoarseCentroid_];
     queryToBaseDistance(coarseCodebook_, numCoarseCentroid_, query,
                          numQueries, dim_, disMatrixCoarse, 100000);
-    
+    queryT.Stop();
+    std::cout<<"[RVQ] distance to coarse centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+
+    queryT.Start();
     // 得到最近的粗聚类中心
     std::vector<int> minCoarseIndices = findMinIndices(disMatrixCoarse, numCoarseCentroid_, numQueries);
+    queryT.Stop();
+    std::cout<<"[RVQ] coarse centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
+    queryT.Start();
     // 计算残差
     std::unique_ptr<float[]> FineData(new float[numQueries * dim_]);
     memcpy(FineData.get(), query, sizeof(float) * numQueries * dim_);
@@ -465,20 +479,35 @@ void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& 
         cblas_saxpy(dim_, -1.0, fineCodebook_ + assign_id * dim_, 1,
                     FineData.get() + i * dim_, 1);
     }
+    queryT.Stop();
+    std::cout<<"[RVQ] calculate residual time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    
 
+    queryT.Start();
     // 得到最近的细聚类中心
     float* disMatrixFine = new float[numQueries * numFineCentroid_];
     queryToBaseDistance(fineCodebook_, numFineCentroid_, query,
                          numQueries, dim_, disMatrixFine, 100000);
+    queryT.Stop();
+    std::cout<<"[RVQ] distance to fine centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    
+    // 得到最近的细聚类中心
+    queryT.Start();
     std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numQueries);
+    queryT.Stop();
+    std::cout<<"[RVQ] fine centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+
 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
+    queryT.Start();
     for(idx_t i = 0; i < numQueries; ++i){
         res.push_back(index_[minCoarseIndices[i]][minFineIndices[i]]);
         // if (i < 100){
         //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
         // }
     }
+    queryT.Stop();
+    std::cout<<"[RVQ] init result vector time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 }
 
 void RVQ::save(const std::string& filename) {
@@ -558,68 +587,61 @@ void RVQ::load(const std::string& filename) {
     in.close();
 }
 
-int main() {
-    // Define parameters
-    int dim = 128; // Dimension of feature vectors
-    int numCoarseCentroids = 10; // Number of coarse centroids
-    int numFineCentroids = 10; // Number of fine centroids
-    int numTrainVectors = 10000; // Number of training vectors
-    int numQueries = 100; // Number of query vectors
+// int main() {
+//     // Define parameters
+//     int dim = 128; // Dimension of feature vectors
+//     int numCoarseCentroids = 10; // Number of coarse centroids
+//     int numFineCentroids = 10; // Number of fine centroids
+//     int numTrainVectors = 10000; // Number of training vectors
+//     int numQueries = 100; // Number of query vectors
 
-    // Generate random training data and query data
-    float* trainData = new float[numTrainVectors * dim];
-    float* queryData = new float[numQueries * dim];
-    fillWithRandom(trainData, numTrainVectors * dim);
-    fillWithRandom(queryData, numQueries * dim);
+//     // Generate random training data and query data
+//     float* trainData = new float[numTrainVectors * dim];
+//     float* queryData = new float[numQueries * dim];
+//     fillWithRandom(trainData, numTrainVectors * dim);
+//     fillWithRandom(queryData, numQueries * dim);
 
-    // Create RVQ object
-    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+//     // Create RVQ object
+//     RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
 
-    // Train RVQ
-    rvq.train(trainData, numTrainVectors);
+//     // Train RVQ
+//     rvq.train(trainData, numTrainVectors);
 
-    // Build reverse index
-    rvq.build(trainData, numTrainVectors);
+//     // Build reverse index
+//     rvq.build(trainData, numTrainVectors);
 
-    // Search using queries
-    std::vector<std::vector<idx_t>> results;
-    rvq.search(queryData, numQueries, results);
+//     // Search using queries
+//     std::vector<std::vector<idx_t>> results;
+//     rvq.search(queryData, numQueries, results);
 
-    // Display search results
-    // std::cout << "Search results:" << std::endl;
-    // for (int i = 0; i < 1; ++i) {
-    //     std::cout << "Query " << i << ": ";
-    //     for (idx_t idx : results[i]) {
-    //         std::cout << idx << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+//     // Display search results
+//     std::cout << "Search results:" << std::endl;
+//     for (int i = 0; i < 1; ++i) {
+//         std::cout << "Query " << i << ": ";
+//         for (idx_t idx : results[i]) {
+//             std::cout << idx << " ";
+//         }
+//         std::cout << std::endl;
+//     }
 
-    rvq.save("rvq_model.bin");
+//     rvq.save("rvq_model.bin");
 
-    RVQ rvq_loaded(128, 100, 100);
-    rvq_loaded.load("rvq_model.bin");
+//     RVQ rvq_loaded(128, 100, 100);
+//     rvq_loaded.load("rvq_model.bin");
 
-    // Display search results
-    std::cout << "Search results:" << std::endl;
-    // for (int i = 0; i < 1; ++i) {
-    //     std::cout << "Query " << i << ": ";
-    //     for (idx_t idx : results[i]) {
-    //         std::cout << idx << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+//     // Display search results
+//     std::cout << "Search results:" << std::endl;
+//     for (int i = 0; i < 1; ++i) {
+//         std::cout << "Query " << i << ": ";
+//         for (idx_t idx : results[i]) {
+//             std::cout << idx << " ";
+//         }
+//         std::cout << std::endl;
+//     }
 
-    // 输出聚类点数
-    for(int i = 0; i < numCoarseCentroids; i++) {
-        for(int j = 0; j < numFineCentroids; j++) {
-            printf("points num of centroid[%d][%d] = %d\n", i, j, rvq.index_[i][j].size());
-        }
-    }
+//     // Clean up
+//     delete[] trainData;
+//     delete[] queryData;
 
-    // Clean up
-    delete[] trainData;
-    delete[] queryData;
-
-    return 0;
-}
+//     return 0;
+// }

@@ -14,6 +14,8 @@
 #include "../common.h"
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign);
+void rand_perm(int* perm, size_t n, int64_t seed);
+void fillWithRandom(float* data, int size);
 
 class RVQ {
 public:

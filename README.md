@@ -13,7 +13,8 @@ Select min k: `anns/functions/Kselect.cu`
 Two layer RVQ index: `anns/RVQ/RVQ.cpp`  
 test RVQ: `cd anns` `nvcc -o rvq RVQ.cpp ../functions/distance_kernel.cu ../functions/selectMin1.cu -lcublas -lmkl_rt`  
   
-### under going
-Fuse three-layer index  
-
+### Hybrid search
+Search: `nvcc -o query query.cu ./RVQ/RVQ.cpp ./hybrid/hybrid.cpp ./graph/graph_index/nsw_graph_operations.cu ./functions/distance_kernel.cu ./functions/selectMin1.cu -lcublas -lmkl_rt -DUSE_L2_DIST_`  
+test:`./query [base_path] [query_path] [graph_path] [groundtruth_path] [e] [k] [points_num]`  
+For instance:`./query /mnt/data1/szr/dataset/sift1b/bigann_base.bvecs /mnt/data1/szr/dataset/sift1b/bigann_query.bvecs /home/ErHa/GANNS_Res/bigann_base.bvecs_16_8_1M.nsw /mnt/data1/szr/dataset/sift1b/gnd/idx_1M.ivecs 16 10 1000000`
 ## BaM data transfer

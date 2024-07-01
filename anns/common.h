@@ -45,7 +45,7 @@ struct SearchTime {
     double beam_search_time{0.0};
 
     double total_time{0.0};
-
+    SearchTime(double s, double e, double d) : entry_time(s), beam_search_time(e), total_time(d) {}
     void SumTime() { total_time = entry_time + beam_search_time; }
 };
 
