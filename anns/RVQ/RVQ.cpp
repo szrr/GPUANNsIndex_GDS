@@ -6,6 +6,7 @@
  * **/
 
 #include <memory>
+#include <fstream>
 #include <cstring>
 #include <cmath>
 #include <limits>
@@ -21,6 +22,8 @@
 #include "../common.h"
 #include "../functions/distance_kernel.cuh"
 #include "../functions/selectMin1.cuh"
+
+std::mt19937 _rnd(time(0));
 
 float kmeans(float* trainData, int numTrainData, int dim, float* codebook, int numCentroids, int* assign) {
     float error = 0.0;
@@ -106,6 +109,16 @@ void rand_perm(int* perm, size_t n, int64_t seed) {
     }
 }
 
+// Function to fill an array with random values
+void fillWithRandom(float* data, int size) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(0.0, 1.0);
+    for (int i = 0; i < size; ++i) {
+        data[i] = dis(gen)*100;
+    }
+}
+
 // subsample_training_set 函数实现
 void subsample_training_set(
     const float* dataset, 
@@ -144,8 +157,77 @@ std::vector<int> findMinIndicesCPU(const float* values, int c, int num) {
     return minIndices;
 }
 
+int rouletteSelection(std::vector<float>& wheel) {
+    float total_val = 0;
+
+    for (auto& val : wheel) {
+        total_val += val;
+    }
+
+    cblas_sscal(wheel.size(), 1.0 / total_val, wheel.data(), 1);
+    std::uniform_real_distribution<double> dis(0, 1.0);
+    double rd = dis(_rnd);
+
+    for (auto id = 0; id < wheel.size();  ++id) {
+        rd -= wheel[id];
+
+        if (rd < 0) {
+            return id;
+        }
+    }
+
+    return wheel.size() - 1;
+}
+
+void KmeansppInitCenter(const int total_cnt, const int sample_cnt,
+                                  const int dim,
+                                  const float* train_dataset, std::vector<int>& sample_ids) {
+    std::vector<float> disbest(total_cnt, std::numeric_limits<float>::max()); // 每个点到最近中心的最小距离
+    std::vector<float> distmp(total_cnt); // 临时距离存储
+    sample_ids.resize(sample_cnt, 0); // 初始化中心索引数组
+    sample_ids[0] = _rnd() % total_cnt; // 随机选择第一个中心
+
+    std::vector<float> points_norm(total_cnt, 0); // 每个点的范数
+
+    // 计算每个数据点的范数
+    #pragma omp parallel for schedule(dynamic) num_threads(_params.nt)
+    for (size_t j = 0; j < total_cnt; j++) {
+        points_norm[j] = cblas_sdot(dim, train_dataset + j * dim, 1, train_dataset + j * dim, 1);
+    }
+
+    // 选择剩余的初始中心
+    for (size_t i = 1; i < sample_cnt; i++) {
+        size_t newsel = sample_ids[i - 1]; // 当前选择的中心索引
+        const float* last_center = train_dataset + newsel * dim; // 当前选择的中心数据
+
+        #pragma omp parallel for schedule(dynamic) num_threads(_params.nt)
+        for (size_t j = 0; j < total_cnt; j++) {
+            float temp = points_norm[j] + points_norm[newsel] - 2.0 * cblas_sdot(dim, train_dataset + j * dim, 1,
+                         last_center, 1); // 计算距离平方
+
+            if (temp < disbest[j]) {
+                disbest[j] = temp; // 更新最近中心的距离
+            }
+        }
+
+        memcpy(distmp.data(), disbest.data(), total_cnt * sizeof(distmp[0])); // 复制距离数据
+        sample_ids[i] = rouletteSelection(distmp); // 轮盘赌选择下一个中心
+    }
+}
+
 float Kmeans (float* trainData, idx_t numTrainData, int dim, float* codebook, int numCentroids, int* assign) {
     printf("[Info] Start Kmeans training\n");
+
+    // 使用 K-means++ 初始化中心
+    std::vector<int> sample_ids;
+    KmeansppInitCenter(numTrainData, numCentroids, dim, trainData, sample_ids);
+
+    // 初始化聚类中心为 K-means++ 选择的中心
+    for (int i = 0; i < numCentroids; ++i) {
+        for (int d = 0; d < dim; ++d) {
+            codebook[i * dim + d] = trainData[sample_ids[i] * dim + d];
+        }
+    }
 
     float* bestCentroids = new float[numCentroids * dim];
 
@@ -174,7 +256,7 @@ float Kmeans (float* trainData, idx_t numTrainData, int dim, float* codebook, in
         //     if (cpuResults[i] != minCentroids[i]) {
         //         std::cerr << "Mismatch at index " << i << ": CPU result = " << cpuResults[i] << ", GPU result = " << minCentroids[i] << std::endl;
         //     }
-        // }
+        // } 
 
         std::fill(countCentroidPoints.begin(), countCentroidPoints.end(), 0);
         for (int i = 0; i < numTrainData; ++i) {
@@ -399,64 +481,145 @@ void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& 
     }
 }
 
-// Function to fill an array with random values
-void fillWithRandom(float* data, int size) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(0.0, 1.0);
-    for (int i = 0; i < size; ++i) {
-        data[i] = dis(gen)*100;
+void RVQ::save(const std::string& filename) {
+    std::ofstream out(filename, std::ios::binary);
+    if (!out) {
+        std::cerr << "Failed to open file for saving." << std::endl;
+        return;
     }
+
+    // 保存维度、聚类中心数量
+    out.write(reinterpret_cast<char*>(&dim_), sizeof(dim_));
+    out.write(reinterpret_cast<char*>(&numCoarseCentroid_), sizeof(numCoarseCentroid_));
+    out.write(reinterpret_cast<char*>(&numFineCentroid_), sizeof(numFineCentroid_));
+
+    // 保存粗聚类中心
+    out.write(reinterpret_cast<char*>(coarseCodebook_), numCoarseCentroid_ * dim_ * sizeof(float));
+
+    // 保存细聚类中心
+    out.write(reinterpret_cast<char*>(fineCodebook_), numFineCentroid_ * dim_ * sizeof(float));
+
+    // 保存索引
+    size_t outerSize = index_.size();
+    out.write(reinterpret_cast<char*>(&outerSize), sizeof(outerSize));
+    for (const auto& inner : index_) {
+        size_t innerSize = inner.size();
+        out.write(reinterpret_cast<char*>(&innerSize), sizeof(innerSize));
+        for (const auto& innerInner : inner) {
+            size_t innerInnerSize = innerInner.size();
+            out.write(reinterpret_cast<char*>(&innerInnerSize), sizeof(innerInnerSize));
+            out.write(reinterpret_cast<char*>(const_cast<idx_t*>(innerInner.data())), innerInnerSize * sizeof(idx_t));
+        }
+    }
+
+    out.close();
 }
 
-// int main() {
-//     // Define parameters
-//     int dim = 128; // Dimension of feature vectors
-//     int numCoarseCentroids = 100; // Number of coarse centroids
-//     int numFineCentroids = 100; // Number of fine centroids
-//     int numTrainVectors = 100000; // Number of training vectors
-//     int numQueries = 10000; // Number of query vectors
+void RVQ::load(const std::string& filename) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        std::cerr << "Failed to open file for loading." << std::endl;
+        return;
+    }
 
-//     // Generate random training data and query data
-//     float* trainData = new float[numTrainVectors * dim];
-//     float* queryData = new float[numQueries * dim];
-//     fillWithRandom(trainData, numTrainVectors * dim);
-//     fillWithRandom(queryData, numQueries * dim);
+    // 加载维度、聚类中心数量
+    in.read(reinterpret_cast<char*>(&dim_), sizeof(dim_));
+    in.read(reinterpret_cast<char*>(&numCoarseCentroid_), sizeof(numCoarseCentroid_));
+    in.read(reinterpret_cast<char*>(&numFineCentroid_), sizeof(numFineCentroid_));
 
-//     // Create RVQ object
-//     RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+    // 分配内存
+    delete[] coarseCodebook_;
+    delete[] fineCodebook_;
+    coarseCodebook_ = new float[numCoarseCentroid_ * dim_];
+    fineCodebook_ = new float[numFineCentroid_ * dim_];
 
-//     // Train RVQ
-//     rvq.train(trainData, numTrainVectors);
+    // 加载粗聚类中心
+    in.read(reinterpret_cast<char*>(coarseCodebook_), numCoarseCentroid_ * dim_ * sizeof(float));
 
-//     for(int i = 0; i < 10; ++i){
-//         printf("coarse centroid [%d]:", i);
-//         for(int j = 0; j < dim; j++){
-//             printf("%f ", rvq.coarseCodebook_[i*dim + j]);
-//         }
-//         printf("\nfine centroid [%d]:", i);
-//         for(int j = 0; j < dim; j++){
-//             printf("%f ", rvq.fineCodebook_[i*dim + j]);
-//         }
-//         printf("\n");
-//     }
+    // 加载细聚类中心
+    in.read(reinterpret_cast<char*>(fineCodebook_), numFineCentroid_ * dim_ * sizeof(float));
 
-//     // Build reverse index
-//     rvq.build(trainData, numTrainVectors);
+    // 加载索引
+    size_t outerSize;
+    in.read(reinterpret_cast<char*>(&outerSize), sizeof(outerSize));
+    index_.resize(outerSize);
+    for (auto& inner : index_) {
+        size_t innerSize;
+        in.read(reinterpret_cast<char*>(&innerSize), sizeof(innerSize));
+        inner.resize(innerSize);
+        for (auto& innerInner : inner) {
+            size_t innerInnerSize;
+            in.read(reinterpret_cast<char*>(&innerInnerSize), sizeof(innerInnerSize));
+            innerInner.resize(innerInnerSize);
+            in.read(reinterpret_cast<char*>(innerInner.data()), innerInnerSize * sizeof(idx_t));
+        }
+    }
 
-//     // Search using queries
-//     std::vector<std::pair<int, int>> results;
-//     rvq.search(queryData, numQueries, results);
+    in.close();
+}
 
-//     // Display search results
-//     std::cout << "Search results:" << std::endl;
-//     for (int i = 0; i < 100; ++i) {
-//         std::cout << "Query " << i << ": Coarse index = " << results[i].first << ", Fine index = " << results[i].second << std::endl;
-//     }
+int main() {
+    // Define parameters
+    int dim = 128; // Dimension of feature vectors
+    int numCoarseCentroids = 10; // Number of coarse centroids
+    int numFineCentroids = 10; // Number of fine centroids
+    int numTrainVectors = 10000; // Number of training vectors
+    int numQueries = 100; // Number of query vectors
 
-//     // Clean up
-//     delete[] trainData;
-//     delete[] queryData;
+    // Generate random training data and query data
+    float* trainData = new float[numTrainVectors * dim];
+    float* queryData = new float[numQueries * dim];
+    fillWithRandom(trainData, numTrainVectors * dim);
+    fillWithRandom(queryData, numQueries * dim);
 
-//     return 0;
-// }
+    // Create RVQ object
+    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+
+    // Train RVQ
+    rvq.train(trainData, numTrainVectors);
+
+    // Build reverse index
+    rvq.build(trainData, numTrainVectors);
+
+    // Search using queries
+    std::vector<std::vector<idx_t>> results;
+    rvq.search(queryData, numQueries, results);
+
+    // Display search results
+    // std::cout << "Search results:" << std::endl;
+    // for (int i = 0; i < 1; ++i) {
+    //     std::cout << "Query " << i << ": ";
+    //     for (idx_t idx : results[i]) {
+    //         std::cout << idx << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    rvq.save("rvq_model.bin");
+
+    RVQ rvq_loaded(128, 100, 100);
+    rvq_loaded.load("rvq_model.bin");
+
+    // Display search results
+    std::cout << "Search results:" << std::endl;
+    // for (int i = 0; i < 1; ++i) {
+    //     std::cout << "Query " << i << ": ";
+    //     for (idx_t idx : results[i]) {
+    //         std::cout << idx << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    // 输出聚类点数
+    for(int i = 0; i < numCoarseCentroids; i++) {
+        for(int j = 0; j < numFineCentroids; j++) {
+            printf("points num of centroid[%d][%d] = %d\n", i, j, rvq.index_[i][j].size());
+        }
+    }
+
+    // Clean up
+    delete[] trainData;
+    delete[] queryData;
+
+    return 0;
+}

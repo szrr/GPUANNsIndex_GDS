@@ -48,9 +48,12 @@ public:
     // 查询搜索
     void search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res);
 
+    void save(const std::string& filename);
+    void load(const std::string& filename);
+
     std::vector<std::vector<std::vector<idx_t>>> get_index();
 
-private:
+public:
     int dim_; // 特征向量维度
     float* coarseCodebook_; // 粗码本
     int numCoarseCentroid_; // 粗略码本中心点数量
