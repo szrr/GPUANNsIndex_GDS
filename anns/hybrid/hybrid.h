@@ -16,6 +16,7 @@
 class hybrid {
 public:
     hybrid(int dim, Data* data, string graph_path, int numCoarseCentroids = 100, int numFineCentroids = 100, int ef = 16, int efConstruction = 64) {
+        dim_ = dim;
         rvq = new RVQ(dim, numCoarseCentroids, numFineCentroids);
         graph = new NavigableSmallWorldGraphWithFixedDegree(data);
         graph->Load(graph_path);
@@ -36,5 +37,6 @@ public:
 //private:
     RVQ* rvq;
     GraphWrapper* graph;
+    int dim_;
 };
 

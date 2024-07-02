@@ -6,3 +6,4 @@ __global__ void findMinIndicesKernel(const float* values, int c, int num, int* m
 
 std::vector<int> findMinIndices(const float* values, int c, int num);
 
+void deviceFindMinIndices(const float* values, int c, int num, int* d_min_indices);

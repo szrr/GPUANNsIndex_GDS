@@ -27,22 +27,30 @@ void hybrid::hybrid_build(float* buildVectorData, num_t numVectors){
     // graph->build(buildVectorData, numVectors, rvqIndex); // add graph build
 }
 
-void hybrid::hybrid_search(float* queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates){
-    std::vector<std::vector<idx_t>> enterPoints;
+void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_queries, int num_candidates){
+    float *d_queries;
+    CUDA_CHECK(cudaMalloc((void **)&d_queries, sizeof(float) * num_queries * dim_));
+    CUDA_CHECK(cudaMemcpy(d_queries, queries, sizeof(float) * num_queries * dim_, cudaMemcpyHostToDevice));
+    
+    // Todo: enter points should be cpu or gpu?
+    int* d_enter_cluster;
+    cudaMalloc((void**)&d_enter_cluster, numQueries * sizeof(int));
     Timer rvqSearch;
     for(int i=0; i<2; i++){
         rvqSearch.Start();
-        rvq->search(queries, num_of_query_points, enterPoints);
+        rvq->search(d_queries, num_queries, d_enter_cluster);
         rvqSearch.Stop();
     }
+    // Todo: graph input: cluster_id and d_index_
+
     Timer* graphSearch = new Timer[4];
-    graph->SearchTopKonDevice(queries, num_of_topk, results, num_of_query_points, num_of_candidates,enterPoints,graphSearch); // add graph build
+    graph->SearchTopKonDevice(queries, topk, results, num_queries, num_candidates, enterPoints, graphSearch); // add graph build
     std::cout<<"Find enter points time: "<<rvqSearch.DurationInMilliseconds()<<" ms"<<std::endl;
     std::cout<<"Transfer data time: "<<graphSearch[0].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds()<<" ms"<<std::endl;
     std::cout<<"Transfer enter points time: "<<graphSearch[1].DurationInMilliseconds()<<" ms"<<std::endl;
     std::cout<<"Search time: "<<graphSearch[2].DurationInMilliseconds()<<" ms"<<std::endl;
-    std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_of_query_points)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
-    std::cout<<"QPS: "<<int64_t(double(num_of_query_points)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds()+graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds())/1000))<<std::endl;
+    std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
+    std::cout<<"QPS: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds()+graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds())/1000))<<std::endl;
     
 }
 

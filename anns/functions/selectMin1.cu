@@ -22,7 +22,7 @@ __global__ void findMinIndicesKernel(const float* values, int c, int num, int* m
     }
 }
 
-// 主机函数，调用CUDA kernel函数并将结果复制回主机内存
+// 调用CUDA kernel函数并将结果复制回主机内存
 std::vector<int> findMinIndices(const float* values, int c, int num) {
     int totalNum = num;
     std::vector<int> minIndices(totalNum, 0); // 初始化为0
@@ -45,6 +45,16 @@ std::vector<int> findMinIndices(const float* values, int c, int num) {
     cudaFree(d_minIndices);
 
     return minIndices;
+}
+
+// 调用CUDA kernel函数并将结果存放在GPU显存
+void deviceFindMinIndices(const float* d_values, int c, int num, int* d_min_indices) {
+    int totalNum = num;
+
+    int blockSize = 256;
+    int numBlocks = (totalNum + blockSize - 1) / blockSize;
+
+    findMinIndicesKernel<<<numBlocks, blockSize>>>(d_values, c, num, d_min_indices);
 }
 
 // int main() {

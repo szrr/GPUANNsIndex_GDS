@@ -19,6 +19,9 @@ void queryToBaseDistance(val_t *base_data, num_t base_num, val_t *query_data,
                          num_t query_num, num_t dim, val_t *dis_matrix,
                          const num_t ChunkSize = 100000);
 
+void deviceQueryToBaseDistance(val_t *d_base_data, num_t base_num, 
+                        val_t *d_query_data, num_t query_num, num_t dim, 
+                        val_t *dis_matrix, const num_t ChunkSize);
 
 struct DevicePair {
     val_t val;

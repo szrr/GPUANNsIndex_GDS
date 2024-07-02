@@ -15,13 +15,46 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
 // #include </usr/include/mkl/mkl_cblas.h>
 // #include </usr/include/mkl/mkl.h>
 // #include </usr/include/mkl/mkl_service.h>
-#include "RVQ.h"
+#include "RVQ.cuh"
 #include "../common.h"
+#include "../functions/check.h"
 #include "../functions/distance_kernel.cuh"
 #include "../functions/selectMin1.cuh"
+
+// GPU 计算最终clusterId的kernel
+__global__ void addKernel(int* d_min_coarse_indices, int* d_min_fine_indices, int* d_enter_cluster, int numFineCentroid, int numQueries) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < numQueries) {
+        d_enter_cluster[idx] = d_min_coarse_indices[idx] * numFineCentroid + d_min_fine_indices[idx];
+    }
+}
+
+// // GPU 计算残差的 kernel
+// __global__ void computeResiduals(const float* coarse_codebook, const int* min_coarse_indices, float* fine_data, int dim, int num_queries, cublasHandle_t handle) {
+//     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+//     if (idx < num_queries) {
+//         int assign_id = min_coarse_indices[idx];
+//         const float alpha = -1.0f;
+//         cublasSaxpy(handle, dim, &alpha, coarse_codebook + assign_id * dim, 1, fine_data + idx * dim, 1);
+//     }
+// }
+
+// 手动计算残差的 kernel
+__global__ void computeResiduals(const float* coarse_codebook, const int* min_coarse_indices, float* fine_data, int dim, int num_queries) {
+    int query_idx = blockIdx.x;
+    int dim_idx = threadIdx.x;
+
+    if (query_idx < num_queries && dim_idx < dim) {
+        int assign_id = min_coarse_indices[query_idx];
+        fine_data[query_idx * dim + dim_idx] -= coarse_codebook[assign_id * dim + dim_idx];
+    }
+}
+
 
 std::mt19937 _rnd(time(0));
 
@@ -431,13 +464,13 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
     memcpy(FineData.get(), buildVectorData, sizeof(float) * numVectors * dim_);
     for (int i = 0; i < numVectors; ++i) {
         int assign_id = minCoarseIndices.data()[i];
-        cblas_saxpy(dim_, -1.0, fineCodebook_ + assign_id * dim_, 1,
+        cblas_saxpy(dim_, -1.0, coarseCodebook_ + assign_id * dim_, 1,
                     FineData.get() + i * dim_, 1);
     }
 
     // 得到最近的细聚类中心
     float* disMatrixFine = new float[numVectors * numFineCentroid_];
-    queryToBaseDistance(fineCodebook_, numFineCentroid_, buildVectorData,
+    queryToBaseDistance(fineCodebook_, numFineCentroid_, FineData.get(),
                          numVectors, dim_, disMatrixFine, 100000);
     std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numVectors);
 
@@ -449,63 +482,108 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
         }
     }
     printf("\n");
+
+    // 拷贝索引数据到GPU
+    if (d_index_) {
+        freeGPUIndex(*d_index_);
+        delete d_index_;
+    }
+    d_index_ = new GPUIndex(copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_));
+
+    // 拷贝粗码本和细码本到GPU
+    cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
+    cudaMemcpy(d_coarse_codebook_, coarseCodebook_, numCoarseCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
+
+    cudaMalloc(&d_fine_codebook_, numFineCentroid_ * dim_ * sizeof(float));
+    cudaMemcpy(d_fine_codebook_, fineCodebook_, numFineCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
 }
 
 // 查询搜索
-void RVQ::search(float* query, int numQueries, std::vector<std::vector<idx_t>>& res) {
+void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
 
     Timer queryT;
     queryT.Start();
     // 计算与粗聚类中心距离
-    float* disMatrixCoarse = new float[numQueries * numCoarseCentroid_];
-    queryToBaseDistance(coarseCodebook_, numCoarseCentroid_, query,
-                         numQueries, dim_, disMatrixCoarse, 100000);
+    //Todo: modify queryToBaseDistance() input to GPU query input
+    //Todo: use GPU memory disMatrix
+    float* d_dis_matrix_coarse;
+    cudaMalloc((void**)&d_dis_matrix_coarse, numQueries * numCoarseCentroid_ * sizeof(float));
+    deviceQueryToBaseDistance(d_coarse_codebook_, numCoarseCentroid_, d_query, numQueries, dim_, d_dis_matrix_coarse, 100000);
     queryT.Stop();
     std::cout<<"[RVQ] distance to coarse centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 
     queryT.Start();
+    int* d_min_coarse_indices;
+    cudaMalloc((void**)&d_min_coarse_indices, numQueries * sizeof(int));
     // 得到最近的粗聚类中心
-    std::vector<int> minCoarseIndices = findMinIndices(disMatrixCoarse, numCoarseCentroid_, numQueries);
+    deviceFindMinIndices(d_dis_matrix_coarse, numCoarseCentroid_, numQueries, d_min_coarse_indices);
     queryT.Stop();
     std::cout<<"[RVQ] coarse centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
-    queryT.Start();
+    // 分配残差计算所需的内存
+    float* d_fine_data;
+    cudaMalloc((void**)&d_fine_data, numQueries * dim_ * sizeof(float));
+    cudaMemcpy(d_fine_data, d_query, numQueries * dim_ * sizeof(float), cudaMemcpyDeviceToDevice);
+
     // 计算残差
-    std::unique_ptr<float[]> FineData(new float[numQueries * dim_]);
-    memcpy(FineData.get(), query, sizeof(float) * numQueries * dim_);
-    for (int i = 0; i < numQueries; ++i) {
-        int assign_id = minCoarseIndices.data()[i];
-        cblas_saxpy(dim_, -1.0, fineCodebook_ + assign_id * dim_, 1,
-                    FineData.get() + i * dim_, 1);
-    }
+    // Todo: change cblas_saxpy to cublasSaxpy
+    queryT.Start();
+    
+    // // 定义 kernel 线程配置
+    // int block_size = 256;
+    // int num_blocks = (numQueries + block_size - 1) / block_size;
+
+    // cublasHandle_t cublas_handle;
+    // cublasCreate(&cublas_handle);
+    // // 启动 kernel 计算残差
+    // computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries, cublas_handle);
+    // cublasDestroy(cublas_handle);
+
+    dim3 block_size(dim_); // 每个block的线程数等于dim
+    dim3 num_blocks(numQueries); // block的数量等于查询数量
+
+    // 启动 kernel 计算残差
+    computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries);
+    CUDA_SYNC_CHECK();
+
     queryT.Stop();
     std::cout<<"[RVQ] calculate residual time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
 
     queryT.Start();
     // 得到最近的细聚类中心
-    float* disMatrixFine = new float[numQueries * numFineCentroid_];
-    queryToBaseDistance(fineCodebook_, numFineCentroid_, query,
-                         numQueries, dim_, disMatrixFine, 100000);
+    float* d_dis_matrix_fine;
+    cudaMalloc((void**)&d_dis_matrix_fine, numQueries * numFineCentroid_ * sizeof(float));
+
+    deviceQueryToBaseDistance(d_fine_codebook_, numFineCentroid_, d_fine_data,
+                         numQueries, dim_, d_dis_matrix_fine, 100000);
     queryT.Stop();
     std::cout<<"[RVQ] distance to fine centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
     // 得到最近的细聚类中心
     queryT.Start();
-    std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numQueries);
+    int* d_min_fine_indices;
+    cudaMalloc((void**)&d_min_fine_indices, numQueries * sizeof(int));
+    deviceFindMinIndices(d_dis_matrix_fine, numFineCentroid_, numQueries, d_min_fine_indices);
     queryT.Stop();
     std::cout<<"[RVQ] fine centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 
 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
     queryT.Start();
-    for(idx_t i = 0; i < numQueries; ++i){
-        res.push_back(index_[minCoarseIndices[i]][minFineIndices[i]]);
-        // if (i < 100){
-        //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
-        // }
-    }
+    // addKernel进行加和
+    int blockSize = 256;
+    int numBlocks = (numQueries + blockSize - 1) / blockSize;
+    addKernel<<<numBlocks, blockSize>>>(d_min_coarse_indices, d_min_fine_indices, d_enter_cluster, numFineCentroid_, numQueries);
+    CUDA_SYNC_CHECK();
+
+    // for(idx_t i = 0; i < numQueries; ++i){
+    //     enter_cluster.push_back(minCoarseIndices[i] * numFineCentroid_ + minFineIndices[i]);
+    //     // if (i < 100){
+    //     //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
+    //     // }
+    // }
     queryT.Stop();
     std::cout<<"[RVQ] init result vector time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 }
@@ -587,61 +665,56 @@ void RVQ::load(const std::string& filename) {
     in.close();
 }
 
-// int main() {
-//     // Define parameters
-//     int dim = 128; // Dimension of feature vectors
-//     int numCoarseCentroids = 10; // Number of coarse centroids
-//     int numFineCentroids = 10; // Number of fine centroids
-//     int numTrainVectors = 10000; // Number of training vectors
-//     int numQueries = 100; // Number of query vectors
+int main() {
+    // Define parameters
+    int dim = 128; // Dimension of feature vectors
+    int numCoarseCentroids = 5; // Number of coarse centroids
+    int numFineCentroids = 5; // Number of fine centroids
+    int numTrainVectors = 100; // Number of training vectors
+    int numQueries = 100; // Number of query vectors
 
-//     // Generate random training data and query data
-//     float* trainData = new float[numTrainVectors * dim];
-//     float* queryData = new float[numQueries * dim];
-//     fillWithRandom(trainData, numTrainVectors * dim);
-//     fillWithRandom(queryData, numQueries * dim);
+    // Generate random training data and query data
+    float* trainData = new float[numTrainVectors * dim];
+    float* queryData = new float[numQueries * dim];
+    fillWithRandom(trainData, numTrainVectors * dim);
+    fillWithRandom(queryData, numQueries * dim);
 
-//     // Create RVQ object
-//     RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+    float *d_queries;
+    cudaMalloc((void **)&d_queries, sizeof(float) * numQueries * dim);
+    cudaMemcpy(d_queries, queryData, sizeof(float) * numQueries * dim, cudaMemcpyHostToDevice);
 
-//     // Train RVQ
-//     rvq.train(trainData, numTrainVectors);
+    // Create RVQ object
+    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
 
-//     // Build reverse index
-//     rvq.build(trainData, numTrainVectors);
+    // Train RVQ
+    rvq.train(trainData, numTrainVectors);
 
-//     // Search using queries
-//     std::vector<std::vector<idx_t>> results;
-//     rvq.search(queryData, numQueries, results);
+    // Build reverse index
+    rvq.build(trainData, numTrainVectors);
 
-//     // Display search results
-//     std::cout << "Search results:" << std::endl;
-//     for (int i = 0; i < 1; ++i) {
-//         std::cout << "Query " << i << ": ";
-//         for (idx_t idx : results[i]) {
-//             std::cout << idx << " ";
-//         }
-//         std::cout << std::endl;
-//     }
+    // Search using queries
+    int* results;
+    cudaMalloc((void**)&results, numQueries * sizeof(int));
+    rvq.search(d_queries, numQueries, results);
+    cudaDeviceSynchronize();
+    
+    // rvq.save("rvq_model.bin");
 
-//     rvq.save("rvq_model.bin");
+    // RVQ rvq_loaded(128, 10, 10);
+    // rvq_loaded.load("rvq_model.bin");
 
-//     RVQ rvq_loaded(128, 100, 100);
-//     rvq_loaded.load("rvq_model.bin");
+        // Get index and print statistics
+    auto index = rvq.get_index();
+    // for (int i = 0; i < numCoarseCentroids; ++i) {
+    //     for (int j = 0; j < numFineCentroids; ++j) {
+    //         std::cout << "Coarse centroid " << i << ", Fine centroid " << j
+    //                   << " has " << index[i][j].size() << " points." << std::endl;
+    //     }
+    // }
 
-//     // Display search results
-//     std::cout << "Search results:" << std::endl;
-//     for (int i = 0; i < 1; ++i) {
-//         std::cout << "Query " << i << ": ";
-//         for (idx_t idx : results[i]) {
-//             std::cout << idx << " ";
-//         }
-//         std::cout << std::endl;
-//     }
+    // Clean up
+    // delete[] trainData;
+    // delete[] queryData;
 
-//     // Clean up
-//     delete[] trainData;
-//     delete[] queryData;
-
-//     return 0;
-// }
+    return 0;
+}
