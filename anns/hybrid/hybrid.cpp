@@ -32,7 +32,6 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     CUDA_CHECK(cudaMalloc((void **)&d_queries, sizeof(float) * num_queries * dim_));
     CUDA_CHECK(cudaMemcpy(d_queries, queries, sizeof(float) * num_queries * dim_, cudaMemcpyHostToDevice));
     
-    // Todo: enter points should be cpu or gpu?
     int* d_enter_cluster;
     cudaMalloc((void**)&d_enter_cluster, numQueries * sizeof(int));
     Timer rvqSearch;
@@ -41,7 +40,13 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
         rvq->search(d_queries, num_queries, d_enter_cluster);
         rvqSearch.Stop();
     }
-    // Todo: graph input: cluster_id and d_index_
+
+    // Todo: graph input
+    // gpu query vectors: (float*) d_queries
+    // gpu search result cluster id: (int*) d_enter_cluster
+    // gpu rvq index: GPUIndex* d_rvq_index = rvq->get_gpu_index()
+    // gpu cluster size: int size = d_rvq_index->size[cluster_id]
+    // gpu cluster points id: int* point_id = d_rvq_index->indices[cluster_id]
 
     Timer* graphSearch = new Timer[4];
     graph->SearchTopKonDevice(queries, topk, results, num_queries, num_candidates, enterPoints, graphSearch); // add graph build
