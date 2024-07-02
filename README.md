@@ -11,7 +11,7 @@ Select min k: `anns/functions/Kselect.cu`
 ## Three-layer index
 ### done
 Two layer RVQ index: `anns/RVQ/RVQ.cpp`  
-test RVQ: `cd anns` `nvcc -o rvq RVQ.cpp ../functions/distance_kernel.cu ../functions/selectMin1.cu -lcublas -lmkl_rt`  
+test RVQ: `cd anns/RVQ` `nvcc -o rvq RVQ.cu ../functions/distance_kernel.cu ../functions/selectMin1.cu -lcublas -lmkl_rt`  
   
 ### Hybrid search
 Search: `nvcc -o query query.cu ./RVQ/RVQ.cpp ./hybrid/hybrid.cpp ./graph/graph_index/nsw_graph_operations.cu ./functions/distance_kernel.cu ./functions/selectMin1.cu -lcublas -lmkl_rt -DUSE_L2_DIST_`  
