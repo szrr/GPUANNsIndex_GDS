@@ -449,6 +449,54 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     
 }
 
+__global__ void testKernel(int** d_indices, int* d_sizes, int* output, int* sizes_output, int numCoarseCentroids, int numFineCentroids) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < numCoarseCentroids * numFineCentroids) {
+        int size = d_sizes[idx];
+        sizes_output[idx] = size;
+        if (size > 0) {
+            output[idx] = d_indices[idx][0]; // 只读取每个cluster中的第一个元素进行测试
+        } else {
+            output[idx] = -1; // 标记为空的情况
+        }
+    }
+}
+void testIndices(GPUIndex* d_index, int numCoarseCentroids, int numFineCentroids) {
+    int totalClusters = numCoarseCentroids * numFineCentroids;
+    int* h_output = new int[totalClusters];
+    int* h_sizes_output = new int[totalClusters];
+    int* d_output;
+    int* d_sizes_output;
+    cudaMalloc(&d_output, totalClusters * sizeof(int));
+    cudaMalloc(&d_sizes_output, totalClusters * sizeof(int));
+
+    // 启动核函数
+    int blockSize = 256;
+    int numBlocks = (totalClusters + blockSize - 1) / blockSize;
+    testKernel<<<numBlocks, blockSize>>>(d_index->indices, d_index->sizes, d_output, d_sizes_output, numCoarseCentroids, numFineCentroids);
+    cudaDeviceSynchronize();
+
+    // 将结果从设备端拷贝到主机端
+    cudaMemcpy(h_output, d_output, totalClusters * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_sizes_output, d_sizes_output, totalClusters * sizeof(int), cudaMemcpyDeviceToHost);
+
+    // 打印结果
+    for (int i = 0; i < totalClusters; ++i) {
+        std::cout << "Cluster " << i << " size: " << h_sizes_output[i];
+        if (h_output[i] != -1) {
+            std::cout << ", first element: " << h_output[i] << std::endl;
+        } else {
+            std::cout << ", is empty." << std::endl;
+        }
+    }
+
+    // 释放内存
+    delete[] h_output;
+    delete[] h_sizes_output;
+    cudaFree(d_output);
+    cudaFree(d_sizes_output);
+}
+
 // 构建反向索引
 void RVQ::build(float* buildVectorData, num_t numVectors) {
     std::cout << "Building index with " << numVectors << " build vectors." << std::endl;
@@ -488,11 +536,10 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
     printf("\n");
 
     // 拷贝索引数据到GPU
-    if (d_index_) {
-        freeGPUIndex(*d_index_);
-        delete d_index_;
-    }
-    d_index_ = new GPUIndex(copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_));
+    // freeGPUIndex(*d_index_);
+
+    copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_, d_index_);
+    testIndices(d_index_, numCoarseCentroid_, numFineCentroid_);
 
     // 拷贝粗码本和细码本到GPU
     cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
@@ -696,25 +743,29 @@ void RVQ::load(const std::string& filename) {
         d_index_ = new GPUIndex();
         d_index_->numCoarseCentroids = numCoarseCentroids;
         d_index_->numFineCentroids = numFineCentroids;
-        cudaMalloc(&d_index_->indices, numCoarseCentroids * numFineCentroids * sizeof(int*));
-        cudaMalloc(&d_index_->sizes, numCoarseCentroids * numFineCentroids * sizeof(int));
+        CUDA_CHECK(cudaMalloc(&d_index_->indices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
+        CUDA_CHECK(cudaMalloc(&d_index_->sizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
+
+        std::vector<int*> hostIndices(numCoarseCentroids * numFineCentroids, nullptr);
+        std::vector<int> hostSizes(numCoarseCentroids * numFineCentroids, 0);
 
         for (int i = 0; i < numCoarseCentroids; ++i) {
             for (int j = 0; j < numFineCentroids; ++j) {
                 int idx = i * numFineCentroids + j;
                 int size;
                 in.read(reinterpret_cast<char*>(&size), sizeof(size));
-                d_index_->sizes[idx] = size;
+                hostSizes[idx] = size;
                 if (size > 0) {
-                    cudaMalloc(&d_index_->indices[idx], size * sizeof(idx_t));
+                    CUDA_CHECK(cudaMalloc(&hostIndices[idx], size * sizeof(idx_t)));
                     std::vector<idx_t> temp(size);
                     in.read(reinterpret_cast<char*>(temp.data()), size * sizeof(idx_t));
-                    cudaMemcpy(d_index_->indices[idx], temp.data(), size * sizeof(idx_t), cudaMemcpyHostToDevice);
-                } else {
-                    d_index_->indices[idx] = nullptr;
+                    CUDA_CHECK(cudaMemcpy(hostIndices[idx], temp.data(), size * sizeof(idx_t), cudaMemcpyHostToDevice));
                 }
             }
         }
+
+        CUDA_CHECK(cudaMemcpy(d_index_->indices, hostIndices.data(), numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_index_->sizes, hostSizes.data(), numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
     } else {
         d_index_ = nullptr;
     }
@@ -750,20 +801,20 @@ int main() {
     rvq.build(trainData, numTrainVectors);
 
     // // Search using queries
-    // int* results;
-    // cudaMalloc((void**)&results, numQueries * sizeof(int));
-    // rvq.search(d_queries, numQueries, results);
-    // cudaDeviceSynchronize();
+    int* results;
+    cudaMalloc((void**)&results, numQueries * sizeof(int));
+    rvq.search(d_queries, numQueries, results);
+    cudaDeviceSynchronize();
 
     // // Copy results from device to host
-    // int* h_results = new int[numQueries];
-    // cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+    int* h_results = new int[numQueries];
+    cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
 
     // // Display results
-    // std::cout << "Search results: " << std::endl;
-    // for (int i = 0; i < numQueries; ++i) {
-    //     std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
-    // }
+    std::cout << "Search results: " << std::endl;
+    for (int i = 0; i < numQueries; ++i) {
+        std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
+    }
 
     // // Get index and print statistics
     // auto index = rvq.get_index();
@@ -775,20 +826,20 @@ int main() {
     //     }
     // }
     
-    // rvq.save("rvq_model.bin");
+    rvq.save("rvq_model.bin");
 
-    // RVQ rvq_loaded(128, 10, 10);
-    // rvq_loaded.load("rvq_model.bin");
-    // rvq_loaded.search(d_queries, numQueries, results);
+    RVQ rvq_loaded(128, 10, 10);
+    rvq_loaded.load("rvq_model.bin");
+    rvq_loaded.search(d_queries, numQueries, results);
 
     // // Copy results from device to host
-    // cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
 
     // // Display results
-    // std::cout << "Search results: " << std::endl;
-    // for (int i = 0; i < numQueries; ++i) {
-    //     std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
-    // }
+    std::cout << "Search results: " << std::endl;
+    for (int i = 0; i < numQueries; ++i) {
+        std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
+    }
 
     // Clean up
     // delete[] trainData;
