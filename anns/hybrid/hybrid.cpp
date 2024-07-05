@@ -9,6 +9,69 @@
 #include <vector>
 #include "hybrid.h"
 
+void testCopyIndexToGPU(int points_num, int numCoarseCentroids, int numFineCentroids, GPUIndex* d_index) {
+
+    srand((unsigned int)(time(0)));
+    vector<std::vector<std::vector<idx_t>>> index;
+    index.resize(numCoarseCentroids);
+    for (int i = 0; i < numCoarseCentroids; ++i) {
+        index[i].resize(numFineCentroids);
+        for (int j = 0; j < numFineCentroids; ++j) {
+            index[i][j].resize((rand()%200)+1);
+            if(i == 0 && j == 0){
+                index[i][j].resize(0);
+            }
+            for(int l = 0; l < index[i][j].size(); l++){
+                index[i][j][l] = rand()%points_num;
+            }
+        }
+    }
+    d_index->numCoarseCentroids = numCoarseCentroids;
+    d_index->numFineCentroids = numFineCentroids;
+
+    // 分配指针数组
+    int** hostIndices = new int*[numCoarseCentroids * numFineCentroids];
+    int* hostSizes = new int[numCoarseCentroids * numFineCentroids];
+
+    // 分配数据并拷贝到GPU
+    for (int i = 0; i < numCoarseCentroids; ++i) {
+        for (int j = 0; j < numFineCentroids; ++j) {
+            int idx = i * numFineCentroids + j;
+            hostSizes[idx] = index[i][j].size();
+            if (hostSizes[idx] > 0) {
+                CUDA_CHECK(cudaMalloc(&hostIndices[idx], hostSizes[idx] * sizeof(idx_t)));
+                CUDA_CHECK(cudaMemcpy(hostIndices[idx], &index[i][j][0], hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
+            } else {
+                hostIndices[idx] = nullptr;
+            }
+        }
+    }
+
+    // 分配GPU端指针
+    CUDA_CHECK(cudaMalloc(&d_index->indices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
+    CUDA_CHECK(cudaMalloc(&d_index->sizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
+
+    // 拷贝指针数组到GPU
+    CUDA_CHECK(cudaMemcpy(d_index->indices, hostIndices, numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_index->sizes, hostSizes, numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
+   
+
+    // 释放临时数组
+    delete[] hostIndices;
+    delete[] hostSizes;
+}
+
+void testHybridSearch(int* d_enter_cluster, int num_queries){
+    int* h_enter_cluster = new int[num_queries];
+    srand((unsigned int)(time(0)));
+    for(int i=0; i<num_queries; i++){
+        h_enter_cluster[i] = rand() % 10000;
+    }
+    cudaMemcpy(d_enter_cluster, h_enter_cluster, sizeof(int)*num_queries, cudaMemcpyHostToDevice);
+}
+
+
+
 void hybrid::hybrid_train(float* trainVectorData, num_t numTrainVectors){
     // for(int k=0;k<10000;k++){
     //     cout<<k<<" "<<endl;
@@ -28,18 +91,20 @@ void hybrid::hybrid_build(float* buildVectorData, num_t numVectors){
 }
 
 void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_queries, int num_candidates){
+
+    Timer* graphSearch = new Timer[4];
+    graphSearch[0].Start();
     float *d_queries;
     CUDA_CHECK(cudaMalloc((void **)&d_queries, sizeof(float) * num_queries * dim_));
     CUDA_CHECK(cudaMemcpy(d_queries, queries, sizeof(float) * num_queries * dim_, cudaMemcpyHostToDevice));
-    
     int* d_enter_cluster;
-    cudaMalloc((void**)&d_enter_cluster, numQueries * sizeof(int));
+    cudaMalloc((void**)&d_enter_cluster, num_queries * sizeof(int));
+    graphSearch[0].Stop();
+    
     Timer rvqSearch;
-    for(int i=0; i<2; i++){
-        rvqSearch.Start();
-        rvq->search(d_queries, num_queries, d_enter_cluster);
-        rvqSearch.Stop();
-    }
+    // rvqSearch.Start();
+    // rvq->search(d_queries, num_queries, d_enter_cluster);
+    // rvqSearch.Stop();
 
     // Todo: graph input
     // gpu query vectors: (float*) d_queries
@@ -48,14 +113,19 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     // gpu cluster size: int size = d_rvq_index->size[cluster_id]
     // gpu cluster points id: int* point_id = d_rvq_index->indices[cluster_id]
 
-    Timer* graphSearch = new Timer[4];
-    graph->SearchTopKonDevice(queries, topk, results, num_queries, num_candidates, enterPoints, graphSearch); // add graph build
+    GPUIndex* d_rvq_index = rvq->get_gpu_index();
+    //test
+    testCopyIndexToGPU(1000000, 100, 100, d_rvq_index);
+    testHybridSearch(d_enter_cluster, num_queries);
+
+    graph->SearchTopKonDevice(d_queries, topk, results, num_queries, num_candidates, d_enter_cluster, d_rvq_index, graphSearch); // add graph build
     std::cout<<"Find enter points time: "<<rvqSearch.DurationInMilliseconds()<<" ms"<<std::endl;
-    std::cout<<"Transfer data time: "<<graphSearch[0].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds()<<" ms"<<std::endl;
-    std::cout<<"Transfer enter points time: "<<graphSearch[1].DurationInMilliseconds()<<" ms"<<std::endl;
+    std::cout<<"Transfer data time: "<<graphSearch[0].DurationInMilliseconds() + graphSearch[1].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds()<<" ms"<<std::endl;
+    //std::cout<<"Transfer enter points time: "<<graphSearch[1].DurationInMilliseconds()<<" ms"<<std::endl;
     std::cout<<"Search time: "<<graphSearch[2].DurationInMilliseconds()<<" ms"<<std::endl;
-    std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
-    std::cout<<"QPS: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds()+graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds())/1000))<<std::endl;
+    //std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
+    std::cout<<"QPS: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds() + 
+    graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds())/1000))<<std::endl;
     
 }
 

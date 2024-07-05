@@ -8,7 +8,7 @@
 #pragma once
 
 #include "../common.h"
-#include "../RVQ/RVQ.h"
+#include "../RVQ/RVQ.cuh"
 #include "../graph/graph_index/navigable_small_world.cuh"
 #include "../graph/graph_index/data.h"
 

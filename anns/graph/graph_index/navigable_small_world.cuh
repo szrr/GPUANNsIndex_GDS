@@ -5,6 +5,7 @@
 #include "nsw_graph_operations.cuh"
 #include "wrapper.h"
 
+
 class NavigableSmallWorldGraphWithFixedDegree : public GraphWrapper{
 
 private:
@@ -128,7 +129,28 @@ public:
         }
     }
 
-    void SearchTopKonDevice(float* queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates, vector<std::vector<int>> enterPoints,Timer* &graphSearch){
+    void enterPointsSearchTopK(float* query, int num_of_query, int k, vector<std::vector<int>> &enterPoints) {
+
+        for(int i = 0; i < num_of_query; i++){
+            if(enterPoints[i].size() < k) continue;
+            priority_queue<pair<float, int>, vector<pair<float, int>>, std::greater<pair<float, int>>> pq;
+            for(int l = 0; l < enterPoints[i].size(); l++){
+               pq.push(std::make_pair(distance(points_->GetFirstPositionofPoint(enterPoints[i][l]), query + (i * points_->GetDimofPoints())), enterPoints[i][l])); 
+            //    if (pq.size() > k) {
+            //         pq.pop();
+            //     }
+            }
+            int n = 0;
+            while (!pq.empty()) {
+                enterPoints[i][n] = pq.top().second;
+                pq.pop();
+                n++;
+            }
+        }
+        
+    }
+
+    void SearchTopKonDevice(float* d_queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates, int* d_enter_cluster, GPUIndex* d_rvq_index, Timer* &graphSearch){
 
         int num_of_topk_ = pow(2.0, ceil(log(num_of_topk) / log(2)));
         cudaMallocHost(&results, sizeof(int) * num_of_query_points * num_of_topk_);
@@ -136,11 +158,11 @@ public:
         num_of_candidates = pow(2.0, ceil(log(num_of_candidates) / log(2)));
 
         DisplaySearchParameters(num_of_topk_, num_of_explored_points);
-
-        //std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    	NSWGraphOperations::Search(points_->GetFirstPositionofPoint(0), queries, graph_, results, num_of_query_points, points_->GetNumPoints(), points_->GetDimofPoints(), offset_shift_, num_of_topk_, num_of_candidates, num_of_explored_points, enterPoints, graphSearch);
-        //std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-        //cout <<"Query time: "<<((double)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count()/1000000)<<"s "<<" Query speed: " << (double)num_of_query_points/((double)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count()/1000000) << " queries per second" << endl;
+        //enterPointsSearchTopK(queries, num_of_query_points, 128, enterPoints);
+        
+    	NSWGraphOperations::Search(points_->GetFirstPositionofPoint(0), d_queries, graph_, results, num_of_query_points, points_->GetNumPoints(), 
+                                   points_->GetDimofPoints(), offset_shift_, num_of_topk_, num_of_candidates, num_of_explored_points, 
+                                   d_enter_cluster, d_rvq_index, graphSearch);
 
     }
 

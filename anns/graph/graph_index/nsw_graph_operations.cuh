@@ -11,7 +11,7 @@
 #include <chrono>
 #include "../graph_kernel_operation/structure_on_device.cuh"
 #include "../../common.h"
-
+#include "../../RVQ/RVQ.cuh"
 using namespace std;
 
 class NSWGraphOperations {
@@ -25,7 +25,7 @@ public:
 														int num_of_points_one_batch, KernelPair<float, int>* d_neighbors, KernelPair<float, int>* d_neighbors_backup,
 														int num_of_final_neighbors, int num_of_candidates, pair<float, int>* first_subgraph);
 
-	static void Search(float* h_data, float* h_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
-						int offset_shift, int num_of_topk, int num_of_candidates, int num_of_explored_points, vector<std::vector<int>> enterPoints,Timer* &graphSearch); 
+	static void Search(float* h_data, float* d_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
+						int offset_shift, int num_of_topk, int num_of_candidates, int num_of_explored_points, int* d_enter_cluster, GPUIndex* d_rvq_index, Timer* &graphSearch); 
 
 };

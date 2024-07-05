@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 #include <cooperative_groups.h>
 #include "nsw_graph_operations.cuh"
+//#include "../../RVQ/RVQ.cuh"
 #include "../graph_kernel_operation/structure_on_device.cuh"
 #include "../graph_kernel_operation/kernel_local_graph_construction.cuh"
 #include "../graph_kernel_operation/kernel_local_neighbors_sort_nsw.cuh"
@@ -9,6 +10,8 @@
 #include "../graph_kernel_operation/kernel_global_edge_sort.cuh"
 #include "../graph_kernel_operation/kernel_aggregate_forward_edges.cuh"
 #include "../graph_kernel_operation/kernel_search_nsw.cuh"
+#include "../graph_kernel_operation/test.cuh"
+
 
 cudaError_t error_check(cudaError_t error_code, int line)
 {
@@ -171,49 +174,24 @@ void NSWGraphOperations::LocalGraphMergenceCoorperativeGroup(float* d_data, int*
 	cudaFree(d_data);
 }
 
-void NSWGraphOperations::Search(float* h_data, float* h_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
-					int offset_shift, int num_of_topk, int num_of_candidates, int num_of_explored_points, vector<std::vector<int>> enterPoints,Timer* &graphSearch) {
+void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
+					int offset_shift, int num_of_topk, int num_of_candidates, int num_of_explored_points, int* d_enter_cluster, GPUIndex* d_rvq_index, Timer* &graphSearch) {
 
 	float* d_data;
 	cudaMalloc(&d_data, sizeof(float) * total_num_of_points * dim_of_point);
 	cudaMemcpy(d_data, h_data, sizeof(float) * total_num_of_points * dim_of_point, cudaMemcpyHostToDevice);
 
-	// for(int i=0; i<1000; i++){
-	// 	printf("%d ",h_graph[i]);
-	// }
-	// printf("\n");
+	
 	int* d_graph;
 	cudaMalloc(&d_graph, sizeof(int) * (total_num_of_points << offset_shift));
 	cudaMemcpy(d_graph, h_graph, sizeof(int) * (total_num_of_points << offset_shift), cudaMemcpyHostToDevice);
 
-	graphSearch[0].Start();
-	float* d_query;
-	cudaMalloc(&d_query, sizeof(float) * num_of_query_points * dim_of_point);
-	cudaMemcpy(d_query, h_query, sizeof(float) * num_of_query_points * dim_of_point, cudaMemcpyHostToDevice);
+	graphSearch[1].Start();
 
 	int* d_result;
 	cudaMalloc(&d_result, sizeof(int) * num_of_query_points * num_of_topk);
-	graphSearch[0].Stop();
-
-	graphSearch[1].Start();
-	int* enter_points_num = new int[num_of_query_points + 1];
-	enter_points_num[0] = 0;
-	vector<int> enter_points;
-	for(int i = 1;i <= num_of_query_points; i++){
-		//cout<<enterPoints[i - 1].size()<<" ";
-		enter_points_num[i] = enterPoints[i - 1].size() + enter_points_num[i - 1];
-		enter_points.insert(enter_points.end(),enterPoints[i - 1].begin(),enterPoints[i - 1].end());
-	}
-	//cout<<endl;
-	int* d_enter_points;
-	cudaMalloc(&d_enter_points,sizeof(int) * enter_points_num[num_of_query_points]);
-	cudaMemcpy(d_enter_points, &enter_points[0], sizeof(int) * enter_points_num[num_of_query_points], cudaMemcpyHostToDevice);
-
-	int* d_enter_points_num ;
-	cudaMalloc(&d_enter_points_num, sizeof(int) * (num_of_query_points));
-	cudaMemcpy(d_enter_points_num, enter_points_num,sizeof(int) * (num_of_query_points), cudaMemcpyHostToDevice);
-
 	graphSearch[1].Stop();
+
 
 	unsigned long long* h_time_breakdown;
 	unsigned long long* d_time_breakdown;
@@ -222,40 +200,45 @@ void NSWGraphOperations::Search(float* h_data, float* h_query, int* h_graph, int
 	cudaMalloc(&d_time_breakdown, num_of_query_points * num_of_phases * sizeof(unsigned long long));
 	cudaMemset(d_time_breakdown, 0, num_of_query_points * num_of_phases * sizeof(unsigned long long));
 
-	int h_count = 0;
-	int *d_count;
-	cudaMalloc(&d_count, sizeof(int));
-    cudaMemcpy(d_count, &h_count, sizeof(int), cudaMemcpyHostToDevice);
+	int h_count[num_of_query_points] = {0};
+	int* d_count;
+	cudaMalloc(&d_count, sizeof(int) * num_of_query_points);
+    cudaMemcpy(d_count, &h_count, sizeof(int) * num_of_query_points, cudaMemcpyHostToDevice);
 
-	graphSearch[2].Start();
 	int shared_mem_size = max(128, (1 << offset_shift));
+	error_check(cudaGetLastError(), __LINE__);
+	graphSearch[2].Start();
 	//DistanceOfEntryPoints<<<num_of_query_points,32>>>(d_data, d_query,d_entry_points,d_enter_points_num,d_enter_points_num_sort);
+	
 	SearchDevice<<<num_of_query_points, 32, (shared_mem_size + num_of_candidates) * (sizeof(KernelPair<float, int>) + sizeof(int))>>>(d_data, d_query, d_result, d_graph, total_num_of_points, 
 																														num_of_query_points, offset_shift, num_of_candidates, num_of_topk, 
-																														num_of_explored_points, d_time_breakdown, d_enter_points, d_enter_points_num, 
-																														shared_mem_size, d_count);
+																														num_of_explored_points, d_time_breakdown, d_enter_cluster, d_rvq_index->indices, 
+																														 d_rvq_index->sizes, shared_mem_size, d_count);
+	// test<<<num_of_query_points, 32, ((1 << offset_shift) + num_of_candidates) * (sizeof(KernelPair<float, int>) + sizeof(int))>>>(d_data, d_query, d_result, d_graph, total_num_of_points, 
+	// 																													num_of_query_points, offset_shift, num_of_candidates, num_of_topk, 
+	// 																													num_of_explored_points, d_time_breakdown, d_count, d_enter_points_num);																													
 	cudaDeviceSynchronize();
+	error_check(cudaGetLastError(), __LINE__);
 	graphSearch[2].Stop();
 
 	graphSearch[3].Start();
 	cudaMemcpy(h_result, d_result, sizeof(int) * num_of_query_points * num_of_topk, cudaMemcpyDeviceToHost);
 	graphSearch[3].Stop();
 
-	cudaMemcpy(&h_count, d_count, sizeof(int), cudaMemcpyDeviceToHost);
-    printf("Number of computation: %d\n", h_count);
+	cudaMemcpy(&h_count, d_count, sizeof(int) * num_of_query_points, cudaMemcpyDeviceToHost);
+	int h_count_sum = 0;
+	for(int i=0; i<num_of_query_points; i++){
+		h_count_sum+=h_count[i];
+	}
+    printf("Number of computation: %d\n", h_count_sum);
 
 	cudaFree(d_graph);
 	cudaFree(d_data);
-	cudaFree(d_enter_points_num);
-	cudaFree(d_enter_points);
+	cudaFree(d_rvq_index);
+	cudaFree(d_enter_cluster);
 	cudaFree(d_query);
 	cudaFree(d_result);
-	// for(int i=0; i< 10; i++){
-	// 	for(int l=0; l<num_of_topk; l++){
-	// 		printf("%d ",h_result[i*num_of_topk +l]);
-	// 	}
-	// 	printf("\n");
-	// }
+	
 	/*cudaMemcpy(h_time_breakdown, d_time_breakdown, num_of_query_points * num_of_phases * sizeof(unsigned long long), cudaMemcpyDeviceToHost);
 
 	unsigned long long stage_1 = 0;
