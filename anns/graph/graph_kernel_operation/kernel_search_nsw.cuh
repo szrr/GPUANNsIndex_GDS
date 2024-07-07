@@ -1384,10 +1384,10 @@ void SearchDevice(float* d_data, float* d_query, int* d_result, int* d_graph, in
     if (t_id == 0) {
             flags[first_position_of_flag] = 0;
         }
-    int cluster_id = d_enter_cluster[crt_point_id];
+    //int cluster_id = d_enter_cluster[crt_point_id];
     
-    int enter_points_num = d_rvq_indices_size[cluster_id];
-    int* enter_points_pos = d_rvq_indices[cluster_id];
+    int enter_points_num = d_rvq_indices_size[crt_point_id];
+    int* enter_points_pos = d_rvq_indices[crt_point_id];
     
     if(enter_points_num == 0){
         if(t_id == 0){

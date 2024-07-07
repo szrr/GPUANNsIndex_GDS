@@ -40,7 +40,7 @@ void testCopyIndexToGPU(int points_num, int numCoarseCentroids, int numFineCentr
             hostSizes[idx] = index[i][j].size();
             if (hostSizes[idx] > 0) {
                 CUDA_CHECK(cudaMalloc(&hostIndices[idx], hostSizes[idx] * sizeof(idx_t)));
-                CUDA_CHECK(cudaMemcpy(hostIndices[idx], &index[i][j][0], hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
+                CUDA_CHECK(cudaMemcpy(hostIndices[idx], index[i][j].data(), hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
             } else {
                 hostIndices[idx] = nullptr;
             }
@@ -48,13 +48,18 @@ void testCopyIndexToGPU(int points_num, int numCoarseCentroids, int numFineCentr
     }
 
     // 分配GPU端指针
-    CUDA_CHECK(cudaMalloc(&d_index->indices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
-    CUDA_CHECK(cudaMalloc(&d_index->sizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
+    int** deviceIndices;
+    CUDA_CHECK(cudaMalloc(&deviceIndices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
+    int* deviceSizes;
+    CUDA_CHECK(cudaMalloc(&deviceSizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
 
     // 拷贝指针数组到GPU
-    CUDA_CHECK(cudaMemcpy(d_index->indices, hostIndices, numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_index->sizes, hostSizes, numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
-   
+    CUDA_CHECK(cudaMemcpy(deviceIndices, hostIndices, numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deviceSizes, hostSizes, numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
+
+    // 设置 GPUIndex 的成员
+    d_index->indices = deviceIndices;
+    d_index->sizes = deviceSizes;
 
     // 释放临时数组
     delete[] hostIndices;
@@ -63,8 +68,10 @@ void testCopyIndexToGPU(int points_num, int numCoarseCentroids, int numFineCentr
 
 void testHybridSearch(int* d_enter_cluster, int num_queries){
     int* h_enter_cluster = new int[num_queries];
+    //cudaMemcpy(h_enter_cluster, d_enter_cluster, sizeof(int) * num_queries, cudaMemcpyDeviceToHost);
     srand((unsigned int)(time(0)));
     for(int i=0; i<num_queries; i++){
+        //printf("%d ",h_enter_cluster[i]);
         h_enter_cluster[i] = rand() % 10000;
     }
     cudaMemcpy(d_enter_cluster, h_enter_cluster, sizeof(int)*num_queries, cudaMemcpyHostToDevice);
@@ -102,9 +109,14 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     graphSearch[0].Stop();
     
     Timer rvqSearch;
-    // rvqSearch.Start();
-    // rvq->search(d_queries, num_queries, d_enter_cluster);
-    // rvqSearch.Stop();
+    rvqSearch.Start();
+    rvq->search(d_queries, num_queries, d_enter_cluster);
+    rvqSearch.Stop();
+    // int* h_enter_cluster = new int[num_queries];
+    // cudaMemcpy(h_enter_cluster, d_enter_cluster, sizeof(float) * num_queries, cudaMemcpyDeviceToHost);
+    // for(int i=0; i<num_queries; i++){
+    //     printf("%d,%d  ",i,h_enter_cluster[i]);
+    // }
 
     // Todo: graph input
     // gpu query vectors: (float*) d_queries
@@ -115,8 +127,8 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
 
     GPUIndex* d_rvq_index = rvq->get_gpu_index();
     //test
-    testCopyIndexToGPU(1000000, 100, 100, d_rvq_index);
-    testHybridSearch(d_enter_cluster, num_queries);
+    //testCopyIndexToGPU(1000000, 100, 100, d_rvq_index);
+    //testHybridSearch(d_enter_cluster, num_queries);
 
     graph->SearchTopKonDevice(d_queries, topk, results, num_queries, num_candidates, d_enter_cluster, d_rvq_index, graphSearch); // add graph build
     std::cout<<"Find enter points time: "<<rvqSearch.DurationInMilliseconds()<<" ms"<<std::endl;

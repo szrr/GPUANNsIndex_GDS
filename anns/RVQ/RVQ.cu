@@ -69,20 +69,26 @@ void copyIndexToGPU(const std::vector<std::vector<std::vector<idx_t>>>& index, i
             hostSizes[idx] = index[i][j].size();
             if (hostSizes[idx] > 0) {
                 CUDA_CHECK(cudaMalloc(&hostIndices[idx], hostSizes[idx] * sizeof(idx_t)));
-                CUDA_CHECK(cudaMemcpy(hostIndices[idx], &index[i][j][0], hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
+                CUDA_CHECK(cudaMemcpy(hostIndices[idx], index[i][j].data(), hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
             } else {
                 hostIndices[idx] = nullptr;
             }
         }
     }
 
-     // 分配GPU端指针
-    CUDA_CHECK(cudaMalloc(&d_index->indices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
-    CUDA_CHECK(cudaMalloc(&d_index->sizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
+    // 分配GPU端指针
+    int** deviceIndices;
+    CUDA_CHECK(cudaMalloc(&deviceIndices, numCoarseCentroids * numFineCentroids * sizeof(int*)));
+    int* deviceSizes;
+    CUDA_CHECK(cudaMalloc(&deviceSizes, numCoarseCentroids * numFineCentroids * sizeof(int)));
 
     // 拷贝指针数组到GPU
-    CUDA_CHECK(cudaMemcpy(d_index->indices, hostIndices, numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_index->sizes, hostSizes, numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deviceIndices, hostIndices, numCoarseCentroids * numFineCentroids * sizeof(int*), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deviceSizes, hostSizes, numCoarseCentroids * numFineCentroids * sizeof(int), cudaMemcpyHostToDevice));
+
+    // 设置 GPUIndex 的成员
+    d_index->indices = deviceIndices;
+    d_index->sizes = deviceSizes;
 
     // 释放临时数组
     delete[] hostIndices;
