@@ -181,7 +181,6 @@ void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int
 	cudaMalloc(&d_data, sizeof(float) * total_num_of_points * dim_of_point);
 	cudaMemcpy(d_data, h_data, sizeof(float) * total_num_of_points * dim_of_point, cudaMemcpyHostToDevice);
 
-	
 	int* d_graph;
 	cudaMalloc(&d_graph, sizeof(int) * (total_num_of_points << offset_shift));
 	cudaMemcpy(d_graph, h_graph, sizeof(int) * (total_num_of_points << offset_shift), cudaMemcpyHostToDevice);
@@ -206,7 +205,6 @@ void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int
     cudaMemcpy(d_count, &h_count, sizeof(int) * num_of_query_points, cudaMemcpyHostToDevice);
 
 	int shared_mem_size = max(128, (1 << offset_shift));
-	error_check(cudaGetLastError(), __LINE__);
 	graphSearch[2].Start();
 	//DistanceOfEntryPoints<<<num_of_query_points,32>>>(d_data, d_query,d_entry_points,d_enter_points_num,d_enter_points_num_sort);
 	
@@ -234,10 +232,8 @@ void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int
 
 	cudaFree(d_graph);
 	cudaFree(d_data);
-	cudaFree(d_rvq_index);
-	cudaFree(d_enter_cluster);
-	cudaFree(d_query);
 	cudaFree(d_result);
+	cudaFree(d_count);
 	
 	/*cudaMemcpy(h_time_breakdown, d_time_breakdown, num_of_query_points * num_of_phases * sizeof(unsigned long long), cudaMemcpyDeviceToHost);
 

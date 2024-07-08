@@ -8,7 +8,6 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include <cuda_runtime.h>
 // #include <mkl_cblas.h>
 // #include <mkl.h>
 // #include <mkl_service.h>
@@ -63,8 +62,8 @@ public:
         //     freeGPUIndex(*d_index_);
         //     delete d_index_;
         // }
-        CUDA_CHECK(cudaFree(d_coarse_codebook_));
-        CUDA_CHECK(cudaFree(d_fine_codebook_));
+        // CUDA_CHECK(cudaFree(d_coarse_codebook_));
+        // CUDA_CHECK(cudaFree(d_fine_codebook_));
         std::cout << "RVQ object destroyed." << std::endl;
     }
 

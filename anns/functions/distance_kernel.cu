@@ -290,10 +290,10 @@ void deviceQueryToBaseDistance(val_t *d_base_data, num_t base_num, val_t *d_quer
         // printf("Debug 5 ...\n");
         CUDA_CHECK(cudaFree(d_base_norms));
         CUDA_CHECK(cudaFree(d_mults));
-        CUDA_CHECK(cudaFree(d_base_data));
+        //CUDA_CHECK(cudaFree(d_base_data));
     }
     CUDA_CHECK(cudaFree(d_query_norms));
-    CUDA_CHECK(cudaFree(d_query_data));
+    //CUDA_CHECK(cudaFree(d_query_data));
 }
 
 // x^2+y^2-2xy

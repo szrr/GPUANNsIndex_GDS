@@ -88,14 +88,14 @@ int main(int argc,char** argv){
     cout << "Load proximity graph..." << endl << endl;
     hybrid* hybrid_graph;
     hybrid_graph =new hybrid(points->GetDimofPoints(), points, graph_path, 100, 100, 16, 64);
-    cout << "Train RVQ..." << endl;
-	hybrid_graph->hybrid_train(points->GetFirstPositionofPoint(0), points->GetNumPoints());
-    cout << "Build RVQ..." << endl;
-    hybrid_graph->hybrid_build(points->GetFirstPositionofPoint(0), points->GetNumPoints());
+    // cout << "Train RVQ..." << endl;
+	// hybrid_graph->hybrid_train(points->GetFirstPositionofPoint(0), points->GetNumPoints());
+    // cout << "Build RVQ..." << endl;
+    // hybrid_graph->hybrid_build(points->GetFirstPositionofPoint(0), points->GetNumPoints());
     // cout << "Save RVQ..." << endl;
     // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
-    //cout << "Load RVQ..." << endl;
-    //hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
+    cout << "Load RVQ..." << endl;
+    hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
 
     //for(int i = 0; i < 2; i++){
     int* results = NULL;

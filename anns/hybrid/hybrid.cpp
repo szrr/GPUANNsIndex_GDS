@@ -97,6 +97,26 @@ void hybrid::hybrid_build(float* buildVectorData, num_t numVectors){
     // graph->build(buildVectorData, numVectors, rvqIndex); // add graph build
 }
 
+void enterClusterSave(int num_queries, int* h_enter_cluster, const string& filename){
+    std::ofstream out(filename, std::ios::binary);
+    if (!out) {
+        std::cerr << "Failed to open file for saving." << std::endl;
+        return;
+    }
+    out.write(reinterpret_cast<char*>(h_enter_cluster), sizeof(h_enter_cluster) * num_queries);
+    out.close();
+}
+
+void enterClusterLoad(int num_queries, int* &h_enter_cluster, const string& filename){
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        std::cerr << "Failed to open file for loading." << std::endl;
+        return;
+    }
+    in.read(reinterpret_cast<char*>(h_enter_cluster), sizeof(h_enter_cluster) * num_queries);
+    in.close();
+}
+
 void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_queries, int num_candidates){
 
     Timer* graphSearch = new Timer[4];
@@ -108,12 +128,24 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     cudaMalloc((void**)&d_enter_cluster, num_queries * sizeof(int));
     graphSearch[0].Stop();
     
+
+    GPUIndex* d_rvq_index = rvq->get_gpu_index();
+    //test
+    //testCopyIndexToGPU(1000000, 100, 100, d_rvq_index);
+    //testHybridSearch(d_enter_cluster, num_queries);
+
     Timer rvqSearch;
     rvqSearch.Start();
     rvq->search(d_queries, num_queries, d_enter_cluster);
     rvqSearch.Stop();
-    // int* h_enter_cluster = new int[num_queries];
-    // cudaMemcpy(h_enter_cluster, d_enter_cluster, sizeof(float) * num_queries, cudaMemcpyDeviceToHost);
+
+    // int* h_enter_cluster;
+    // h_enter_cluster = new int[20000];
+    // cudaMemcpy(h_enter_cluster, d_enter_cluster, sizeof(int) * num_queries, cudaMemcpyDeviceToHost);
+    //enterClusterSave(num_queries, h_enter_cluster, "/home/ErHa/GANNS_Res/h_enter_cluster.bin");
+    // enterClusterLoad(num_queries, h_enter_cluster, "/home/ErHa/GANNS_Res/h_enter_cluster.bin");
+    // cudaMemcpy(d_enter_cluster, h_enter_cluster, sizeof(int) * num_queries, cudaMemcpyHostToDevice);
+
     // for(int i=0; i<num_queries; i++){
     //     printf("%d,%d  ",i,h_enter_cluster[i]);
     // }
@@ -125,10 +157,6 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     // gpu cluster size: int size = d_rvq_index->size[cluster_id]
     // gpu cluster points id: int* point_id = d_rvq_index->indices[cluster_id]
 
-    GPUIndex* d_rvq_index = rvq->get_gpu_index();
-    //test
-    //testCopyIndexToGPU(1000000, 100, 100, d_rvq_index);
-    //testHybridSearch(d_enter_cluster, num_queries);
 
     graph->SearchTopKonDevice(d_queries, topk, results, num_queries, num_candidates, d_enter_cluster, d_rvq_index, graphSearch); // add graph build
     std::cout<<"Find enter points time: "<<rvqSearch.DurationInMilliseconds()<<" ms"<<std::endl;
@@ -138,7 +166,10 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     //std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
     std::cout<<"QPS: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds() + 
     graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds())/1000))<<std::endl;
-    
+
+    cudaFree(d_rvq_index);
+	cudaFree(d_enter_cluster);
+	cudaFree(d_queries);
 }
 
 void hybrid::hybrid_save(const std::string& filename) {
