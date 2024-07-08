@@ -1371,7 +1371,7 @@ void SearchDevice(float* d_data, float* d_query, int* d_result, int* d_graph, in
         int unrollt_id = t_id + size_of_warp * i;
 
         if (unrollt_id < num_of_candidates + num_of_visited_points_one_batch) {
-            flags[unrollt_id] = 1;
+            flags[unrollt_id] = 0;
 
             neighbors_array[unrollt_id].first = Max;
             neighbors_array[unrollt_id].second = total_num_of_points;
@@ -1384,7 +1384,7 @@ void SearchDevice(float* d_data, float* d_query, int* d_result, int* d_graph, in
     int enter_points_num = d_rvq_indices_size[cluster_id];
     int* enter_points_pos = d_rvq_indices[cluster_id];
     
-    if(enter_points_num == 0){
+    if(enter_points_num >= 0){
         int target_point_id = 0;
     
 #if DIM > 0
@@ -1791,6 +1791,7 @@ void SearchDevice(float* d_data, float* d_query, int* d_result, int* d_graph, in
                 else if(unrollt_id < num_of_visited_points_one_batch){
                     neighbors_array[num_of_candidates + unrollt_id].second = total_num_of_points;
                 }
+                flags[num_of_candidates + unrollt_id] = 1;
             }
             auto stage2_end = clock64();
             if(t_id == 0){

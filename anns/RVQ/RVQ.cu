@@ -464,7 +464,7 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     //     std::cout<<std::endl;
     // }
     // 采样训练点，不超过10w
-    idx_t numSelectTrainVec = 100000;
+    idx_t numSelectTrainVec = 500000;
     // 检查输入参数是否有效
     if (numSelectTrainVec > numTrainVectors) {
         std::cout << "Number of select training vectors : " << numTrainVectors << std::endl;
@@ -650,24 +650,24 @@ void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
 
     Timer queryT;
-    queryT.Start();
+    //queryT.Start();
     // 计算与粗聚类中心距离
     //Todo: modify queryToBaseDistance() input to GPU query input
     //Todo: use GPU memory disMatrix
     float* d_dis_matrix_coarse;
     cudaMalloc((void**)&d_dis_matrix_coarse, numQueries * numCoarseCentroid_ * sizeof(float));
     deviceQueryToBaseDistance(d_coarse_codebook_, numCoarseCentroid_, d_query, numQueries, dim_, d_dis_matrix_coarse, 100000);
-    queryT.Stop();
-    std::cout<<"[RVQ] distance to coarse centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] distance to coarse centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     CUDA_SYNC_CHECK();
 
-    queryT.Start();
+    //queryT.Start();
     int* d_min_coarse_indices;
     cudaMalloc((void**)&d_min_coarse_indices, numQueries * sizeof(int));
     // 得到最近的粗聚类中心
     deviceFindMinIndices(d_dis_matrix_coarse, numCoarseCentroid_, numQueries, d_min_coarse_indices);
-    queryT.Stop();
-    std::cout<<"[RVQ] coarse centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] coarse centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     CUDA_SYNC_CHECK();
     
     // 分配残差计算所需的内存
@@ -678,7 +678,7 @@ void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
 
     // 计算残差
     // Todo: change cblas_saxpy to cublasSaxpy
-    queryT.Start();
+    //queryT.Start();
     
     // // 定义 kernel 线程配置
     // int block_size = 256;
@@ -697,31 +697,31 @@ void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
     computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries);
     CUDA_SYNC_CHECK();
 
-    queryT.Stop();
-    std::cout<<"[RVQ] calculate residual time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] calculate residual time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
 
-    queryT.Start();
+    //queryT.Start();
     // 得到最近的细聚类中心
     float* d_dis_matrix_fine;
     cudaMalloc((void**)&d_dis_matrix_fine, numQueries * numFineCentroid_ * sizeof(float));
 
     deviceQueryToBaseDistance(d_fine_codebook_, numFineCentroid_, d_fine_data,
                          numQueries, dim_, d_dis_matrix_fine, 100000);
-    queryT.Stop();
-    std::cout<<"[RVQ] distance to fine centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] distance to fine centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
     // 得到最近的细聚类中心
-    queryT.Start();
+    //queryT.Start();
     int* d_min_fine_indices;
     cudaMalloc((void**)&d_min_fine_indices, numQueries * sizeof(int));
     deviceFindMinIndices(d_dis_matrix_fine, numFineCentroid_, numQueries, d_min_fine_indices);
-    queryT.Stop();
-    std::cout<<"[RVQ] fine centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] fine centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 
 
     //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
-    queryT.Start();
+    //queryT.Start();
     // addKernel进行加和
     int blockSize = 256;
     int numBlocks = (numQueries + blockSize - 1) / blockSize;
@@ -734,8 +734,8 @@ void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
     //     //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
     //     // }
     // }
-    queryT.Stop();
-    std::cout<<"[RVQ] init result vector time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    //queryT.Stop();
+    //std::cout<<"[RVQ] init result vector time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 }
 
 void RVQ::save(const std::string& filename) {

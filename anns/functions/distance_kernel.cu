@@ -1,5 +1,6 @@
 #include "check.h"
 #include "distance_kernel.cuh"
+#include "../common.h"
 
 #include <cublas_v2.h>
 #include <stdio.h>
@@ -228,18 +229,23 @@ void RunSumAlongRows(val_t *input, val_t *output, num_t m, num_t n) {
 void deviceQueryToBaseDistance(val_t *d_base_data, num_t base_num, val_t *d_query_data, num_t query_num, num_t dim, val_t *dis_matrix, const num_t ChunkSize) {
     // printf("[Info] distance calculation on %d centroids and %d quries\n", base_num, query_num);
     // compute queries
-
+    Timer queryT;
     constexpr num_t row_tile_size = 8;
     int block_size = BLOCK_SIZE;
     //* query L2Norm
+    //queryT.Start();
     val_t *d_query_norms;
     CUDA_CHECK(cudaMalloc((void **)&d_query_norms, sizeof(val_t) * query_num));
+    //queryT.Stop();
+    //std::cout<<"[RVQ] 1: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     int blocks = (query_num + row_tile_size - 1) / row_tile_size;
     size_t smem_bytes = sizeof(val_t) * row_tile_size * WARPS_PER_BLOCK;
-
+    //queryT.Start();
     L2NormKernel<row_tile_size><<<blocks, block_size, smem_bytes, 0>>>(
         d_query_data, query_num, dim, d_query_norms);
     CUDA_SYNC_CHECK();
+    //queryT.Stop();
+    //std::cout<<"[RVQ] 7: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 
     // TODO: result matrix is too large, so we split the base data to multiple
     // chunks
@@ -254,46 +260,66 @@ void deviceQueryToBaseDistance(val_t *d_base_data, num_t base_num, val_t *d_quer
                                                  : base_num - base_start);
 
         //* base data L2Norm
+        //queryT.Start();
         val_t *d_base_norms;
         CUDA_CHECK(
             cudaMalloc((void **)&d_base_norms, sizeof(val_t) * base_size));
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 2: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         blocks = (base_size + row_tile_size - 1) / row_tile_size;
         smem_bytes = sizeof(val_t) * row_tile_size * WARPS_PER_BLOCK;
-
+        //queryT.Start();
         L2NormKernel<row_tile_size><<<blocks, block_size, smem_bytes, 0>>>(
             d_base_data, base_size, dim, d_base_norms);
         CUDA_SYNC_CHECK();
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 8: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         // printf("Debug 1 ...\n");
         //* ====================
         //* A(query_num * dim) * B(base_size * dim) => C(query_num * base_size)
-        val_t *d_mults;
-        CUDA_CHECK(cudaMalloc((void **)&d_mults,
-                              sizeof(val_t) * query_num * base_size));
-        RunMatrixMult(d_query_data, d_base_data, d_mults, query_num, base_size,
+        // queryT.Start();
+        // val_t *d_mults;
+        // CUDA_CHECK(cudaMalloc((void **)&d_mults,
+        //                       sizeof(val_t) * query_num * base_size));
+        // queryT.Stop();
+        // std::cout<<"[RVQ] 3: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+        //queryT.Start();
+        RunMatrixMult(d_query_data, d_base_data, dis_matrix, query_num, base_size,
                       dim);
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 9: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         //* ====================
         // printf("Debug 2 ...\n");
         //* add ||query||^2 along rows
-        RunSumAlongRows(d_query_norms, d_mults, query_num, base_size);
+        //queryT.Start();
+        RunSumAlongRows(d_query_norms, dis_matrix, query_num, base_size);
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 10: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         // printf("Debug 3 ...\n");
         //* add ||base||^2 along columns
-        RunSumAlongColumns(d_base_norms, d_mults, query_num, base_size);
+        //queryT.Start();
+        RunSumAlongColumns(d_base_norms, dis_matrix, query_num, base_size);
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 11: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         // printf("Debug 4 ...\n");
-        //* copy distance to host
-        for (num_t i = 0; i < query_num; i++) {
-            CUDA_CHECK(
-                cudaMemcpy(dis_matrix + (i * (size_t)base_num + base_start),
-                           d_mults + (i * base_size),
-                           sizeof(val_t) * base_size, cudaMemcpyDeviceToHost));
+        // * copy distance to host
+        // queryT.Start();
+        // CUDA_CHECK(cudaMemcpy(dis_matrix, d_mults,
+        //                    sizeof(val_t) * base_size, cudaMemcpyDeviceToHost));
             //   printf("Debug 4.%d ...\n",i);
-        }
+        // queryT.Stop();
+        // std::cout<<"[RVQ] 4: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
         // printf("Debug 5 ...\n");
+        //queryT.Start();
         CUDA_CHECK(cudaFree(d_base_norms));
-        CUDA_CHECK(cudaFree(d_mults));
-        //CUDA_CHECK(cudaFree(d_base_data));
+        // CUDA_CHECK(cudaFree(d_mults));
+        //queryT.Stop();
+        //std::cout<<"[RVQ] 5: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     }
+    //queryT.Start();
     CUDA_CHECK(cudaFree(d_query_norms));
-    //CUDA_CHECK(cudaFree(d_query_data));
+    //queryT.Stop();
+    //std::cout<<"[RVQ] 6: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
 }
 
 // x^2+y^2-2xy

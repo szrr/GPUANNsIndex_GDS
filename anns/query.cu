@@ -93,7 +93,7 @@ int main(int argc,char** argv){
     // cout << "Build RVQ..." << endl;
     // hybrid_graph->hybrid_build(points->GetFirstPositionofPoint(0), points->GetNumPoints());
     // cout << "Save RVQ..." << endl;
-    // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
+    // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq_model_100_100_500000_1M.bin");
     cout << "Load RVQ..." << endl;
     hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
 

@@ -135,6 +135,7 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     //testHybridSearch(d_enter_cluster, num_queries);
 
     Timer rvqSearch;
+    rvq->search(d_queries, num_queries, d_enter_cluster);
     rvqSearch.Start();
     rvq->search(d_queries, num_queries, d_enter_cluster);
     rvqSearch.Stop();
@@ -163,7 +164,8 @@ void hybrid::hybrid_search(float* queries, int topk, int* &results, int num_quer
     std::cout<<"Transfer data time: "<<graphSearch[0].DurationInMilliseconds() + graphSearch[1].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds()<<" ms"<<std::endl;
     //std::cout<<"Transfer enter points time: "<<graphSearch[1].DurationInMilliseconds()<<" ms"<<std::endl;
     std::cout<<"Search time: "<<graphSearch[2].DurationInMilliseconds()<<" ms"<<std::endl;
-    //std::cout<<"QPS without transfer enter points: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[2].DurationInMilliseconds()+graphSearch[3].DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds())/1000))<<std::endl;
+    std::cout<<"QPS without RVQ: "<<int64_t(double(num_queries)/((graphSearch[0].DurationInMilliseconds() + graphSearch[1].DurationInMilliseconds()
+    + graphSearch[2].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds())/1000))<<std::endl;
     std::cout<<"QPS: "<<int64_t(double(num_queries)/((rvqSearch.DurationInMilliseconds()+graphSearch[0].DurationInMilliseconds() + 
     graphSearch[1].DurationInMilliseconds() + graphSearch[2].DurationInMilliseconds() + graphSearch[3].DurationInMilliseconds())/1000))<<std::endl;
 
