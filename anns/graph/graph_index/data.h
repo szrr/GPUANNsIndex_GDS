@@ -81,7 +81,7 @@ public:
         int dim;
         in_descriptor.read((char*)&dim, 4);
         dim_of_point_=dim;
-        cout<<"Dim: "<<dim_of_point_<<endl;
+        printf("Dim:%d \n ",dim_of_point_);
         //in_descriptor.seekg(0, std::ios::end);
         //long long file_size = in_descriptor.tellg(); 
         num_of_points_ = n;

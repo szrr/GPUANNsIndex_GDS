@@ -87,25 +87,25 @@ int main(int argc,char** argv){
     
     cout << "Load proximity graph..." << endl << endl;
     hybrid* hybrid_graph;
-    hybrid_graph =new hybrid(points->GetDimofPoints(), points, graph_path, 100, 100, 16, 64);
-    // cout << "Train RVQ..." << endl;
-	// hybrid_graph->hybrid_train(points->GetFirstPositionofPoint(0), points->GetNumPoints());
-    // cout << "Build RVQ..." << endl;
-    // hybrid_graph->hybrid_build(points->GetFirstPositionofPoint(0), points->GetNumPoints());
-    // cout << "Save RVQ..." << endl;
-    // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq_model_100_100_500000_1M.bin");
-    cout << "Load RVQ..." << endl;
-    hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
+    hybrid_graph =new hybrid(points->GetDimofPoints(), points, graph_path, 500, 500, 16, 64);
+    cout << "Train RVQ..." << endl;
+	hybrid_graph->hybrid_train(points->GetFirstPositionofPoint(0), points->GetNumPoints());
+    cout << "Build RVQ..." << endl;
+    hybrid_graph->hybrid_build(points->GetFirstPositionofPoint(0), points->GetNumPoints());
+    cout << "Save RVQ..." << endl;
+    hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq_model_1000_1000_1000000_10M.bin");
+    // cout << "Load RVQ..." << endl;
+    // hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq_model_100_100_1M.bin");
 
     //for(int i = 0; i < 2; i++){
-    int* results = NULL;
-    cout << "Search...Query number: " <<query_points->GetNumPoints()<<" Num of candidates: "<<num_of_candidates<<endl << endl;
-    hybrid_graph->hybrid_search(query_points->GetFirstPositionofPoint(0), num_of_topk, results, query_points->GetNumPoints(), num_of_candidates);
+    // int* results = NULL;
+    // cout << "Search...Query number: " <<query_points->GetNumPoints()<<" Num of candidates: "<<num_of_candidates<<endl << endl;
+    // hybrid_graph->hybrid_search(query_points->GetFirstPositionofPoint(0), num_of_topk, results, query_points->GetNumPoints(), num_of_candidates);
     
-    float recall = 0;
+    // float recall = 0;
     
-    ComputeRecall(results, groundtruth, query_points->GetNumPoints(), num_of_topk, k_of_groundtruth, pow(2.0, ceil(log(num_of_topk) / log(2))), recall);
-    cout << "Recall: " << recall << endl;
+    // ComputeRecall(results, groundtruth, query_points->GetNumPoints(), num_of_topk, k_of_groundtruth, pow(2.0, ceil(log(num_of_topk) / log(2))), recall);
+    // cout << "Recall: " << recall << endl;
     //}
 
     return 0;

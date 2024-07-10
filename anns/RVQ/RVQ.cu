@@ -464,7 +464,7 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     //     std::cout<<std::endl;
     // }
     // 采样训练点，不超过10w
-    idx_t numSelectTrainVec = 500000;
+    idx_t numSelectTrainVec = 1000000;
     // 检查输入参数是否有效
     if (numSelectTrainVec > numTrainVectors) {
         std::cout << "Number of select training vectors : " << numTrainVectors << std::endl;
@@ -637,7 +637,7 @@ void RVQ::build(float* buildVectorData, num_t numVectors) {
     copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_, d_index_);
     testIndices(d_index_, numCoarseCentroid_, numFineCentroid_);
 
-    // 拷贝粗码本和细码本到GPU
+    // // 拷贝粗码本和细码本到GPU
     cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
     cudaMemcpy(d_coarse_codebook_, coarseCodebook_, numCoarseCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
 
