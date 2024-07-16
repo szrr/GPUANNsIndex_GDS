@@ -11,6 +11,9 @@ public:
 	virtual void SearchTopKonDevice(float* queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates,int* d_enter_cluster, GPUIndex* d_rvq_index,Timer* &graphSearch) = 0;
 	virtual void DisplayGraphParameters(int num_of_candidates) = 0;
 	virtual void DisplaySearchParameters(int num_of_topk, int num_of_candidates) = 0;
+	virtual float* getDeviceData() = 0;
+	virtual float* getHostData() = 0;
+    virtual int getNumOfPoints() = 0;
 
 private:
 	

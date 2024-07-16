@@ -174,12 +174,27 @@ void NSWGraphOperations::LocalGraphMergenceCoorperativeGroup(float* d_data, int*
 	cudaFree(d_data);
 }
 
-void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
+__global__
+void zeroCount(int* d_enter_cluster,int* d_rvq_index_sizes,int* d_num_of_zero_query, int* d_max_cluster){
+	int bid = blockIdx.x;
+	int tid = threadIdx.x;
+	int cluster_id = d_enter_cluster[bid];
+	int cluster_size = d_rvq_index_sizes[cluster_id];
+	if(tid == 0){
+		//printf("%d ",cluster_size);
+		if(cluster_size == 0){
+			atomicAdd(&d_num_of_zero_query[0], 1);
+		}
+		atomicMax(&d_max_cluster[0], cluster_size);
+	}
+}
+
+void NSWGraphOperations::Search(float* d_data, float* d_query, int* h_graph, int* h_result, int num_of_query_points, int total_num_of_points, int dim_of_point, 
 					int offset_shift, int num_of_topk, int num_of_candidates, int num_of_explored_points, int* d_enter_cluster, GPUIndex* d_rvq_index, Timer* &graphSearch) {
 
-	float* d_data;
-	cudaMalloc(&d_data, sizeof(float) * total_num_of_points * dim_of_point);
-	cudaMemcpy(d_data, h_data, sizeof(float) * total_num_of_points * dim_of_point, cudaMemcpyHostToDevice);
+	// float* d_data;
+	// cudaMalloc(&d_data, sizeof(float) * total_num_of_points * dim_of_point);
+	// cudaMemcpy(d_data, h_data, sizeof(float) * total_num_of_points * dim_of_point, cudaMemcpyHostToDevice);
 
 	int* d_graph;
 	cudaMalloc(&d_graph, sizeof(int) * (total_num_of_points << offset_shift));
@@ -199,22 +214,35 @@ void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int
 	cudaMalloc(&d_time_breakdown, num_of_query_points * num_of_phases * sizeof(unsigned long long));
 	cudaMemset(d_time_breakdown, 0, num_of_query_points * num_of_phases * sizeof(unsigned long long));
 
+	int* h_num_of_zero_query = new int[1];
+	int* d_num_of_zero_query;
+	cudaMalloc(&d_num_of_zero_query, sizeof(int));
+	cudaMemset(d_num_of_zero_query, 0, sizeof(int));
+
+	int* h_max_cluster = new int[1];
+	int* d_max_cluster;
+	cudaMalloc(&d_max_cluster, sizeof(int));
+	cudaMemset(d_max_cluster, 0, sizeof(int));
+
 	int h_count[num_of_query_points] = {0};
 	int* d_count;
 	cudaMalloc(&d_count, sizeof(int) * num_of_query_points);
     cudaMemcpy(d_count, &h_count, sizeof(int) * num_of_query_points, cudaMemcpyHostToDevice);
 
+	int h_zero_count[num_of_query_points] = {0};
+	int* d_zero_count;
+	cudaMalloc(&d_zero_count, sizeof(int) * num_of_query_points);
+    cudaMemcpy(d_zero_count, &h_zero_count, sizeof(int) * num_of_query_points, cudaMemcpyHostToDevice);
+
+	zeroCount<<<num_of_query_points, 1>>>(d_enter_cluster, d_rvq_index->sizes, d_num_of_zero_query, d_max_cluster);
+	cudaDeviceSynchronize();
 	int shared_mem_size = max(128, (1 << offset_shift));
 	graphSearch[2].Start();
-	//DistanceOfEntryPoints<<<num_of_query_points,32>>>(d_data, d_query,d_entry_points,d_enter_points_num,d_enter_points_num_sort);
-	
-	SearchDevice<<<num_of_query_points, 32, (shared_mem_size + num_of_candidates) * (sizeof(KernelPair<float, int>) + sizeof(int))>>>(d_data, d_query, d_result, d_graph, total_num_of_points, 
-																														num_of_query_points, offset_shift, num_of_candidates, num_of_topk, 
-																														num_of_explored_points, d_time_breakdown, d_enter_cluster, d_rvq_index->indices, 
-																														 d_rvq_index->sizes, shared_mem_size, d_count);
-	// test<<<num_of_query_points, 32, ((1 << offset_shift) + num_of_candidates) * (sizeof(KernelPair<float, int>) + sizeof(int))>>>(d_data, d_query, d_result, d_graph, total_num_of_points, 
-	// 																													num_of_query_points, offset_shift, num_of_candidates, num_of_topk, 
-	// 																													num_of_explored_points, d_time_breakdown, d_count, d_enter_points_num);																													
+	SearchDevice<<<num_of_query_points, 32, (shared_mem_size + num_of_candidates) * (sizeof(KernelPair<float, int>) + sizeof(int))>>>
+													(d_data, d_query, d_result, d_graph, total_num_of_points, num_of_query_points, 
+													offset_shift, num_of_candidates, num_of_topk, num_of_explored_points, d_time_breakdown, 
+													d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, shared_mem_size, 
+													d_count, d_zero_count);																													
 	cudaDeviceSynchronize();
 	error_check(cudaGetLastError(), __LINE__);
 	graphSearch[2].Stop();
@@ -224,11 +252,19 @@ void NSWGraphOperations::Search(float* h_data, float* d_query, int* h_graph, int
 	graphSearch[3].Stop();
 
 	cudaMemcpy(&h_count, d_count, sizeof(int) * num_of_query_points, cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_zero_count, d_zero_count, sizeof(int) * num_of_query_points, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_num_of_zero_query,d_num_of_zero_query, sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_max_cluster,d_max_cluster, sizeof(int), cudaMemcpyDeviceToHost);
 	int h_count_sum = 0;
+	int h_zero_count_sum=0;
 	for(int i=0; i<num_of_query_points; i++){
 		h_count_sum+=h_count[i];
+		h_zero_count_sum+=h_zero_count[i];
 	}
-    printf("Number of computation: %d\n", h_count_sum);
+	printf("Max size of query cluster: %d\n", h_max_cluster[0]);
+    printf("Number of query without zero cluster computation: %d\n", h_count_sum);
+	printf("Number of query with zero cluster: %d\n", h_num_of_zero_query[0]);
+	printf("Number of query with zero cluster computation: %d\n", h_zero_count_sum);
 
 	cudaFree(d_graph);
 	cudaFree(d_data);

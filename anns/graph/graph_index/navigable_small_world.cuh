@@ -14,8 +14,10 @@ private:
     int offset_shift_;
     int num_of_points_one_batch_ = 500;
     int num_of_batches_;
-    int* graph_;
+    idx_t* graph_;
+    idx_t* d_graph;
     Data* points_;
+    val_t* d_data;
     pair<float, int>* first_subgraph;
     std::mt19937_64 rand_gen_ = std::mt19937_64(1234567);
 
@@ -28,7 +30,6 @@ private:
         return points_->COSDistance(point_a, point_b);
 #endif
     }
-
     void UpdateEdges(int last_point_id, int previous_point_id, float distance) {
         int position_of_neighbors_of_previous_point = previous_point_id << offset_shift_;
 
@@ -56,8 +57,22 @@ public:
         int total_num_of_points = points_->GetNumPoints();
         num_of_batches_ = (total_num_of_points + num_of_points_one_batch_ - 1) / num_of_points_one_batch_;
         num_of_points_one_batch_ = (total_num_of_points + num_of_batches_ - 1) / num_of_batches_;
+        cudaMalloc(&d_data, sizeof(float) * points_->GetNumPoints() * points_->GetDimofPoints());
+        cudaMemcpy(d_data, points_->data_, sizeof(float) * points_->GetNumPoints() * points_->GetDimofPoints(), cudaMemcpyHostToDevice);
     }
     
+    float* getDeviceData(){
+        return d_data;
+    }
+
+    float* getHostData(){
+        return points_->GetFirstPositionofPoint(0);
+    }
+
+    int getNumOfPoints(){
+        return points_->GetNumPoints();
+    }
+
     void AddPointinGraph(int point_id, float* point) {
         
         vector<pair<float, int>> neighbors;
@@ -129,27 +144,6 @@ public:
         }
     }
 
-    void enterPointsSearchTopK(float* query, int num_of_query, int k, vector<std::vector<int>> &enterPoints) {
-
-        for(int i = 0; i < num_of_query; i++){
-            if(enterPoints[i].size() < k) continue;
-            priority_queue<pair<float, int>, vector<pair<float, int>>, std::greater<pair<float, int>>> pq;
-            for(int l = 0; l < enterPoints[i].size(); l++){
-               pq.push(std::make_pair(distance(points_->GetFirstPositionofPoint(enterPoints[i][l]), query + (i * points_->GetDimofPoints())), enterPoints[i][l])); 
-            //    if (pq.size() > k) {
-            //         pq.pop();
-            //     }
-            }
-            int n = 0;
-            while (!pq.empty()) {
-                enterPoints[i][n] = pq.top().second;
-                pq.pop();
-                n++;
-            }
-        }
-        
-    }
-
     void SearchTopKonDevice(float* d_queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates, int* d_enter_cluster, GPUIndex* d_rvq_index, Timer* &graphSearch){
 
         int num_of_topk_ = pow(2.0, ceil(log(num_of_topk) / log(2)));
@@ -160,7 +154,7 @@ public:
         DisplaySearchParameters(num_of_topk_, num_of_explored_points);
         //enterPointsSearchTopK(queries, num_of_query_points, 128, enterPoints);
         
-    	NSWGraphOperations::Search(points_->GetFirstPositionofPoint(0), d_queries, graph_, results, num_of_query_points, points_->GetNumPoints(), 
+    	NSWGraphOperations::Search(d_data, d_queries, graph_, results, num_of_query_points, points_->GetNumPoints(), 
                                    points_->GetDimofPoints(), offset_shift_, num_of_topk_, num_of_candidates, num_of_explored_points, 
                                    d_enter_cluster, d_rvq_index, graphSearch);
 

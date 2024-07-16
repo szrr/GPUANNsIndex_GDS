@@ -18,8 +18,8 @@ public:
     hybrid(int dim, Data* data, string graph_path, int numCoarseCentroids = 100, int numFineCentroids = 100, int ef = 16, int efConstruction = 64) {
         dim_ = dim;
         rvq = new RVQ(dim, numCoarseCentroids, numFineCentroids);
-        // graph = new NavigableSmallWorldGraphWithFixedDegree(data);
-        // graph->Load(graph_path);
+        graph = new NavigableSmallWorldGraphWithFixedDegree(data);
+        graph->Load(graph_path);
     }
 
     ~hybrid() {
@@ -27,8 +27,8 @@ public:
         delete graph;
     }
 
-    void hybrid_train(float* trainVectorData, num_t numTrainVectors);
-    void hybrid_build(float* buildVectorData, num_t numVectors);
+    void hybrid_train();
+    void hybrid_build();
     void hybrid_search(float* queries, int num_of_topk, int* &results, int num_of_query_points, int num_of_candidates);
 
     void hybrid_save(const std::string& filename);

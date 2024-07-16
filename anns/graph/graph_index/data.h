@@ -5,6 +5,7 @@
 #include <string.h>
 #include <fstream>
 #include <cmath>
+#include "../../common.h"
 
 using namespace std;
 
