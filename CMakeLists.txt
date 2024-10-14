@@ -55,3 +55,14 @@ set_target_properties(query-client PROPERTIES
 find_package(CUDA REQUIRED)
 include_directories(${CUDA_INCLUDE_DIRS})
 target_link_libraries(query-client PRIVATE ${CUDA_LIBRARIES})
+
+set(SRC_FILES_G2L
+    ${CMAKE_SOURCE_DIR}/graph2libnvm.cu
+)
+
+add_executable(g2l-client ${SRC_FILES_G2L})
+target_link_libraries(g2l-client PRIVATE ${CMAKE_SOURCE_DIR}/storage_engine/build/lib/libnvm.so)
+set_target_properties(g2l-client PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_ARCHITECTURES "70"
+)
