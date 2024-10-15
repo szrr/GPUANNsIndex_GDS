@@ -1,5 +1,6 @@
 #include<iostream>
 #include"bam_impl.h"
+#include "read_write.cuh"
 
 Parameters parameters;
 std::vector<Controller*> ctrls;
@@ -102,7 +103,7 @@ void process() {
 
 
     // writePreGraph2SSD<<<blocksPerGrid, threadsPerBlock>>>(diskgraph->d_array_ptr, data, n_items);
-    // readTest<<<blocksPerGrid, threadsPerBlock>>>(diskgraph->d_array_ptr, n_items);
+    readTest<<<blocksPerGrid, threadsPerBlock>>>(diskgraph->d_array_ptr, n_items);
     
     
 
@@ -124,5 +125,6 @@ void process() {
 
 
 int main(){
+    process();
     return 0;
 }
