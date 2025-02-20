@@ -12,14 +12,15 @@ using linklistsize_t = unsigned int;
 struct Timer {
     std::chrono::time_point<std::chrono::high_resolution_clock> start_point,
         end_point;
-
+    std::chrono::duration<double, std::milli> duration;
     void Start() { start_point = std::chrono::high_resolution_clock::now(); }
 
-    void Stop() { end_point = std::chrono::high_resolution_clock::now(); }
+    void Stop() { end_point = std::chrono::high_resolution_clock::now(); 
+                  duration = end_point - start_point;}
 
     double DurationInMilliseconds() {
-        std::chrono::duration<double, std::milli> duration =
-            end_point - start_point;
+        // std::chrono::duration<double, std::milli> duration =
+        //     end_point - start_point;
         return duration.count();
     }
 };

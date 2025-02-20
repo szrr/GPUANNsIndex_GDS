@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <cstring>
 #include <cmath>
 #include <limits>
@@ -17,6 +19,7 @@
 #include <random>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <string>
 // #include </usr/include/mkl/mkl_cblas.h>
 // #include </usr/include/mkl/mkl.h>
 // #include </usr/include/mkl/mkl_service.h>
@@ -25,6 +28,105 @@
 #include "../functions/check.h"
 #include "../functions/distance_kernel.cuh"
 #include "../functions/selectMin1.cuh"
+#include "./select_nearest_cluster.cuh"
+
+
+void checkPointerType(void* ptr) {
+    cudaPointerAttributes attributes;
+    cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
+
+    if (err != cudaSuccess) {
+        std::cerr << "cudaPointerGetAttributes failed: " << cudaGetErrorString(err) << std::endl;
+        return;
+    }
+
+    switch (attributes.type) {
+        case cudaMemoryTypeHost:
+            std::cout << "Pointer is a host (CPU) pointer." << std::endl;
+            break;
+        case cudaMemoryTypeDevice:
+            std::cout << "Pointer is a device (GPU) pointer." << std::endl;
+            break;
+        case cudaMemoryTypeManaged:
+            std::cout << "Pointer is a managed memory pointer." << std::endl;
+            break;
+        default:
+            std::cout << "Pointer type is unknown." << std::endl;
+            break;
+    }
+}
+
+// 分配并拷贝索引数据到GPU端
+void RVQ::copyIndexToGPU(GPUIndex* d_index) {
+
+    d_index->numCoarseCentroids = numCoarseCentroid_;
+    d_index->numFineCentroids = numFineCentroid_;
+
+    // 分配指针数组
+    int** hostIndices = new int*[numCoarseCentroid_ * numFineCentroid_];
+    int* hostSizes = new int[numCoarseCentroid_ * numFineCentroid_];
+
+    // 分配数据并拷贝到GPU
+    for (int i = 0; i < numCoarseCentroid_; ++i) {
+        for (int j = 0; j < numFineCentroid_; ++j) {
+            int idx = i * numFineCentroid_ + j;
+            hostSizes[idx] = index_[i][j].size();
+            if (hostSizes[idx] > 0) {
+                CUDA_CHECK(cudaMalloc((void**)&hostIndices[idx], hostSizes[idx] * sizeof(idx_t)));
+                CUDA_CHECK(cudaMemcpy(hostIndices[idx], index_[i][j].data(), hostSizes[idx] * sizeof(idx_t), cudaMemcpyHostToDevice));
+            } else {
+                hostIndices[idx] = nullptr;
+            }
+        }
+    }
+
+    // 分配GPU端指针
+    int** deviceIndices;
+    CUDA_CHECK(cudaMalloc((void**)&deviceIndices, numCoarseCentroid_ * numFineCentroid_ * sizeof(int*)));
+    int* deviceSizes;
+    CUDA_CHECK(cudaMalloc((void**)&deviceSizes, numCoarseCentroid_ * numFineCentroid_ * sizeof(int)));
+
+    // 拷贝指针数组到GPU
+    CUDA_CHECK(cudaMemcpy(deviceIndices, hostIndices, numCoarseCentroid_ * numFineCentroid_ * sizeof(int*), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deviceSizes, hostSizes, numCoarseCentroid_ * numFineCentroid_ * sizeof(int), cudaMemcpyHostToDevice));
+
+    // 设置 GPUIndex 的成员
+    d_index->indices = deviceIndices;
+    d_index->sizes = deviceSizes;
+
+    // 释放临时数组
+    delete[] hostIndices;
+    delete[] hostSizes;
+}
+
+
+
+// 释放GPU端的索引数据
+void freeGPUIndex(GPUIndex& gpuIndex) {
+    if (gpuIndex.indices != nullptr) {
+        int totalClusters = gpuIndex.numCoarseCentroids * gpuIndex.numFineCentroids;
+        int* hostSizes = new int[totalClusters];
+        
+        int** hostIndices = new int*[totalClusters];
+        CUDA_CHECK(cudaMemcpy(hostIndices, gpuIndex.indices, totalClusters * sizeof(int*), cudaMemcpyDeviceToHost));
+
+        CUDA_CHECK(cudaMemcpy(hostSizes, gpuIndex.sizes, totalClusters * sizeof(int), cudaMemcpyDeviceToHost));
+
+        for (int i = 0; i < totalClusters; ++i) {
+            if (hostSizes[i] > 0) {
+                CUDA_CHECK(cudaFree(hostIndices[i]));
+            }
+        }
+
+        delete[] hostSizes;
+
+        checkPointerType(gpuIndex.indices);
+        checkPointerType(gpuIndex.sizes);
+        CUDA_CHECK(cudaFree(gpuIndex.indices));
+        CUDA_CHECK(cudaFree(gpuIndex.sizes));
+    }
+}
+
 
 // GPU 计算最终clusterId的kernel
 __global__ void addKernel(int* d_min_coarse_indices, int* d_min_fine_indices, int* d_enter_cluster, int numFineCentroid, int numQueries) {
@@ -154,7 +256,7 @@ void fillWithRandom(float* data, int size) {
 
 // subsample_training_set 函数实现
 void subsample_training_set(
-    const float* dataset, 
+    std::string base_path, 
     idx_t numVector, 
     int dim, 
     idx_t numTrainVec, 
@@ -162,14 +264,23 @@ void subsample_training_set(
     int64_t seed = 1234) {
 
     // 生成随机排列
-    std::vector<int> perm(numVector);
-    rand_perm(perm.data(), numVector, seed);
+    std::vector<int> perm(numTrainVec);
+    std::uniform_int_distribution<> dis(0, numVector - 1);
+    std::mt19937 rng(seed);
+    for (int i = 0; i < numTrainVec; ++i) {
+        perm[i] = dis(rng); // 生成并填充随机数
+    }
+    // rand_perm(perm.data(), numVector, seed);
     
 
     // 选择前 numTrainVec 个随机向量作为训练数据
-    for (idx_t i = 0; i < numTrainVec; i++) {
-        std::memcpy(trainVectors + i * dim, dataset + perm[i] * dim, sizeof(float) * dim);
+    std::ifstream vector_file(base_path, std::ios::binary);
+    for (size_t i = 0; i < numTrainVec; i++) {
+        // std::memcpy(trainVectors + i * dim, dataset + perm[i] * dim, sizeof(float) * dim);
+        vector_file.seekg(size_t(perm[i]) * size_t(dim) * sizeof(float), std::ios::beg);
+        vector_file.read((char*)trainVectors + i * size_t(dim), size_t(dim) * sizeof(float));
     }
+    vector_file.close();
 }
 
 std::vector<int> findMinIndicesCPU(const float* values, int c, int num) {
@@ -232,7 +343,6 @@ void KmeansppInitCenter(const int total_cnt, const int sample_cnt,
     for (size_t i = 1; i < sample_cnt; i++) {
         size_t newsel = sample_ids[i - 1]; // 当前选择的中心索引
         const float* last_center = train_dataset + newsel * dim; // 当前选择的中心数据
-
         #pragma omp parallel for schedule(dynamic) num_threads(_params.nt)
         for (size_t j = 0; j < total_cnt; j++) {
             float temp = points_norm[j] + points_norm[newsel] - 2.0 * cblas_sdot(dim, train_dataset + j * dim, 1,
@@ -353,12 +463,20 @@ std::vector<std::vector<std::vector<idx_t>>> RVQ::get_index(){
     return index_;
 }
 
+int RVQ::get_numCoarseCentroid(){
+    return numCoarseCentroid_;
+}
+
+int RVQ::get_numFineCentroid(){
+    return numFineCentroid_;
+}
+
 GPUIndex* RVQ::get_gpu_index() {
     return d_index_;
 }
 
 // 训练粗略量化码本
-void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
+void RVQ::train(std::string base_path, idx_t numTrainVectors) {
     std::cout << "Training input : " << numTrainVectors << " vectors." << std::endl;
     // for(int i = 0; i<numTrainVectors; i++){
     //     std::cout<<i<<std::endl;
@@ -367,18 +485,18 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     //     }
     //     std::cout<<std::endl;
     // }
-    // 采样训练点，不超过10w
-    idx_t numSelectTrainVec = 100000;
+    // 采样训练点，不超过20w
+    idx_t numSelectTrainVec = 200000;
     // 检查输入参数是否有效
     if (numSelectTrainVec > numTrainVectors) {
         std::cout << "Number of select training vectors : " << numTrainVectors << std::endl;
         numSelectTrainVec = numTrainVectors;
     } else {
-        std::cout << "Number of select training vectors : 100000" << std::endl;
+        std::cout << "Number of select training vectors : 200000" << std::endl;
     }
 
     float* selectTrainVectors = new float[numSelectTrainVec * dim_];
-    subsample_training_set(trainVectorData, numTrainVectors, dim_, numSelectTrainVec, selectTrainVectors);
+    subsample_training_set(base_path, numTrainVectors, dim_, numSelectTrainVec, selectTrainVectors);
 
     // 迭代的最小误差
     float min_err = std::numeric_limits<float>::max();
@@ -387,9 +505,9 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
     memcpy(trainData.get(), selectTrainVectors, sizeof(float) * numSelectTrainVec * dim_);
     // 每次kmeans产生的聚类中心
     std::unique_ptr<float[]> coarseCodebook(new float[numCoarseCentroid_ * dim_]);
-    std::unique_ptr<int[]> coarseCodebookAssign(new int[numTrainVectors]);
+    std::unique_ptr<int[]> coarseCodebookAssign(new int[numSelectTrainVec]);
     std::unique_ptr<float[]> fineCodebook(new float[numFineCentroid_ * dim_]);
-    std::unique_ptr<int[]> fineCodebookAssign(new int[numTrainVectors]);
+    std::unique_ptr<int[]> fineCodebookAssign(new int[numSelectTrainVec]);
 
     // 第一层 迭代训练数据 重复调用k-means 参考Tinker
     int iter = 10;
@@ -446,6 +564,25 @@ void RVQ::train(float* trainVectorData, idx_t numTrainVectors) {
         }
 
     }
+    //保存聚类中心
+    std::ofstream out("/home/ErHa/GANNS_Res/rvq/Codebook_"+std::to_string(numCoarseCentroid_)+"_"+std::to_string(numFineCentroid_)
+    +"_"+std::to_string(numSelectTrainVec)+"_"+std::to_string(numTrainVectors/1000000)+"M.bin", std::ios::binary);
+    if (!out) {
+        std::cerr << "Failed to open file for saving." << std::endl;
+        return;
+    }
+
+    // 保存维度、聚类中心数量
+    out.write(reinterpret_cast<char*>(&dim_), sizeof(dim_));
+    out.write(reinterpret_cast<char*>(&numCoarseCentroid_), sizeof(numCoarseCentroid_));
+    out.write(reinterpret_cast<char*>(&numFineCentroid_), sizeof(numFineCentroid_));
+
+    // 保存粗聚类中心
+    out.write(reinterpret_cast<char*>(coarseCodebook_), numCoarseCentroid_ * dim_ * sizeof(float));
+
+    // 保存细聚类中心
+    out.write(reinterpret_cast<char*>(fineCodebook_), numFineCentroid_ * dim_ * sizeof(float));
+    out.close();
     
 }
 
@@ -497,149 +634,150 @@ void testIndices(GPUIndex* d_index, int numCoarseCentroids, int numFineCentroids
     cudaFree(d_sizes_output);
 }
 
+__global__ void cal_fine_data(float* d_fine_data, float* d_coarse_codebook, int* d_min_coarse_indices, int dim_){
+
+    for (int i = threadIdx.x; i < dim_; i += blockDim.x) {
+        d_fine_data[blockIdx.x*dim_ + i] -= d_coarse_codebook[d_min_coarse_indices[blockIdx.x]*dim_ + i];
+    }
+
+}
+
 // 构建反向索引
-void RVQ::build(float* buildVectorData, num_t numVectors) {
-    std::cout << "Building index with " << numVectors << " build vectors." << std::endl;
+void RVQ::build(float* d_buildVectorData, num_t num, idx_t base_id) {
+
     // Todo: 距离计算没有分块，可能放不下
     // Todo: fuse (distance + 1-selection) 放入一个kernel?
+    int k = 1;
 
-    // 计算与粗聚类中心距离
-    float* disMatrixCoarse = new float[numVectors * numCoarseCentroid_];
-    queryToBaseDistance(coarseCodebook_, numCoarseCentroid_, buildVectorData,
-                         numVectors, dim_, disMatrixCoarse, 100000);
-    
-    // 得到最近的粗聚类中心
-    std::vector<int> minCoarseIndices = findMinIndices(disMatrixCoarse, numCoarseCentroid_, numVectors);
-    
-    // 计算残差
-    std::unique_ptr<float[]> FineData(new float[numVectors * dim_]);
-    memcpy(FineData.get(), buildVectorData, sizeof(float) * numVectors * dim_);
-    for (int i = 0; i < numVectors; ++i) {
-        int assign_id = minCoarseIndices.data()[i];
-        cblas_saxpy(dim_, -1.0, coarseCodebook_ + assign_id * dim_, 1,
-                    FineData.get() + i * dim_, 1);
-    }
+    int numVectors = 1000000;
+    int iteration = ceil(num / numVectors);
+    int* d_result;
+    cudaMalloc((void**)&d_result, numVectors * k * sizeof(int));
+    int* h_result = new int[numVectors * k];
+    std::ostringstream filename1;
+    filename1 << "/home/ErHa/GANNS_Res/subdata/cluster.bin";
+    std::ofstream file1(filename1.str(), std::ios::binary | std::ios::app);
 
-    // 得到最近的细聚类中心
-    float* disMatrixFine = new float[numVectors * numFineCentroid_];
-    queryToBaseDistance(fineCodebook_, numFineCentroid_, FineData.get(),
-                         numVectors, dim_, disMatrixFine, 100000);
-    std::vector<int> minFineIndices = findMinIndices(disMatrixFine, numFineCentroid_, numVectors);
-
-    // 加入反向列表
-    for(idx_t i = 0; i < numVectors; ++i){
-        index_[minCoarseIndices[i]][minFineIndices[i]].push_back(i);
-        if (i < 100) {
-            printf("dataset%d : coarseId=%d, fineId=%d\n", i, minCoarseIndices[i], minFineIndices[i]);
+    std::ostringstream filename2;
+    filename2 << "/home/ErHa/GANNS_Res/subdata/clusterOffset.bin"; 
+    std::ofstream file2(filename2.str(), std::ios::binary | std::ios::app);
+    for(int iter = 0; iter < iteration; iter++){
+        //printf("%d\n",iter);
+        int tmpNumVectors = numVectors;
+        if(iter == iteration - 1){
+            tmpNumVectors = num - iter * numVectors;
         }
+        constexpr int WARP_SIZE = 32;
+        constexpr int NumWarpQ = 32;
+        constexpr int NumThreadQ = 1;
+        selectNearestCluster<int, float, WARP_SIZE, NumWarpQ, NumThreadQ><<<tmpNumVectors, 32, min(numCoarseCentroid_, NumWarpQ) * sizeof(KernelPair<float, int>)>>>(
+                            d_buildVectorData + iter * numVectors * dim_, d_coarse_codebook_, d_fine_codebook_, d_result, tmpNumVectors,
+                            dim_, k, numCoarseCentroid_, numFineCentroid_);
+        
+        cudaMemcpy(h_result, d_result, numVectors * k * sizeof(int), cudaMemcpyDeviceToHost);
+        for(idx_t i = 0; i < tmpNumVectors; ++i){
+            for(idx_t l = 0; l < k; ++l){
+                int coarse_id = h_result[i * k + l] / numFineCentroid_;
+                int fine_id = h_result[i * k + l] % numFineCentroid_;
+                int size = index_[coarse_id][fine_id].size();
+                file2.write(reinterpret_cast<char*>(&size), sizeof(int));
+                index_[coarse_id][fine_id].push_back(i + numVectors * iter + base_id);
+                file1.write(reinterpret_cast<char*>(&h_result[i * k + l]), sizeof(int));
+                
+            }
+            
+        }
+        
     }
-    printf("\n");
-
-    // 拷贝索引数据到GPU
-    // freeGPUIndex(*d_index_);
-
-    copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_, d_index_);
-    testIndices(d_index_, numCoarseCentroid_, numFineCentroid_);
-
-    // 拷贝粗码本和细码本到GPU
-    cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
-    cudaMemcpy(d_coarse_codebook_, coarseCodebook_, numCoarseCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
-
-    cudaMalloc(&d_fine_codebook_, numFineCentroid_ * dim_ * sizeof(float));
-    cudaMemcpy(d_fine_codebook_, fineCodebook_, numFineCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
+    file1.close();
+    file2.close();
 }
 
 // 查询搜索
 void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
+    constexpr int WARP_SIZE = 32;
+    constexpr int NumWarpQ = 32;
+    constexpr int NumThreadQ = 1;
+    selectNearestCluster<int, float, WARP_SIZE, NumWarpQ, NumThreadQ><<<numQueries, 32, min(numCoarseCentroid_, NumWarpQ) * sizeof(KernelPair<float, int>)>>>(
+                        d_query, d_coarse_codebook_, d_fine_codebook_, d_enter_cluster, numQueries,
+                        dim_, 1, numCoarseCentroid_, numFineCentroid_);
 
-    Timer queryT;
-    queryT.Start();
     // 计算与粗聚类中心距离
     //Todo: modify queryToBaseDistance() input to GPU query input
     //Todo: use GPU memory disMatrix
-    float* d_dis_matrix_coarse;
-    cudaMalloc((void**)&d_dis_matrix_coarse, numQueries * numCoarseCentroid_ * sizeof(float));
-    deviceQueryToBaseDistance(d_coarse_codebook_, numCoarseCentroid_, d_query, numQueries, dim_, d_dis_matrix_coarse, 100000);
-    queryT.Stop();
-    std::cout<<"[RVQ] distance to coarse centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
-    CUDA_SYNC_CHECK();
+    // float* d_dis_matrix_coarse;
+    // cudaMalloc((void**)&d_dis_matrix_coarse, numQueries * numCoarseCentroid_ * sizeof(float));
+    // deviceQueryToBaseDistance(d_coarse_codebook_, numCoarseCentroid_, d_query, numQueries, dim_, d_dis_matrix_coarse, 100000);
+    // CUDA_SYNC_CHECK();
 
-    queryT.Start();
-    int* d_min_coarse_indices;
-    cudaMalloc((void**)&d_min_coarse_indices, numQueries * sizeof(int));
-    // 得到最近的粗聚类中心
-    deviceFindMinIndices(d_dis_matrix_coarse, numCoarseCentroid_, numQueries, d_min_coarse_indices);
-    queryT.Stop();
-    std::cout<<"[RVQ] coarse centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
-    CUDA_SYNC_CHECK();
+    // int* d_min_coarse_indices;
+    // cudaMalloc((void**)&d_min_coarse_indices, numQueries * sizeof(int));
+    // // 得到最近的粗聚类中心
+    // deviceFindMinIndices(d_dis_matrix_coarse, numCoarseCentroid_, numQueries, d_min_coarse_indices);
+    // CUDA_SYNC_CHECK();
     
-    // 分配残差计算所需的内存
-    float* d_fine_data;
-    CUDA_CHECK(cudaMalloc((void**)&d_fine_data, numQueries * dim_ * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(d_fine_data, d_query, numQueries * dim_ * sizeof(float), cudaMemcpyDeviceToDevice));
-    CUDA_SYNC_CHECK();
+    // // 分配残差计算所需的内存
+    // float* d_fine_data;
+    // CUDA_CHECK(cudaMalloc((void**)&d_fine_data, numQueries * dim_ * sizeof(float)));
+    // CUDA_CHECK(cudaMemcpy(d_fine_data, d_query, numQueries * dim_ * sizeof(float), cudaMemcpyDeviceToDevice));
+    // CUDA_SYNC_CHECK();
 
-    // 计算残差
-    // Todo: change cblas_saxpy to cublasSaxpy
-    queryT.Start();
+    // // 计算残差
+    // // Todo: change cblas_saxpy to cublasSaxpy
     
-    // // 定义 kernel 线程配置
-    // int block_size = 256;
-    // int num_blocks = (numQueries + block_size - 1) / block_size;
+    // // // 定义 kernel 线程配置
+    // // int block_size = 256;
+    // // int num_blocks = (numQueries + block_size - 1) / block_size;
 
-    // cublasHandle_t cublas_handle;
-    // cublasCreate(&cublas_handle);
+    // // cublasHandle_t cublas_handle;
+    // // cublasCreate(&cublas_handle);
+    // // // 启动 kernel 计算残差
+    // // computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries, cublas_handle);
+    // // cublasDestroy(cublas_handle);
+
+    // dim3 block_size(dim_); // 每个block的线程数等于dim
+    // dim3 num_blocks(numQueries); // block的数量等于查询数量
+
     // // 启动 kernel 计算残差
-    // computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries, cublas_handle);
-    // cublasDestroy(cublas_handle);
+    // computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries);
+    // CUDA_SYNC_CHECK();
 
-    dim3 block_size(dim_); // 每个block的线程数等于dim
-    dim3 num_blocks(numQueries); // block的数量等于查询数量
-
-    // 启动 kernel 计算残差
-    computeResiduals<<<num_blocks, block_size>>>(d_coarse_codebook_, d_min_coarse_indices, d_fine_data, dim_, numQueries);
-    CUDA_SYNC_CHECK();
-
-    queryT.Stop();
-    std::cout<<"[RVQ] calculate residual time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
     
 
-    queryT.Start();
-    // 得到最近的细聚类中心
-    float* d_dis_matrix_fine;
-    cudaMalloc((void**)&d_dis_matrix_fine, numQueries * numFineCentroid_ * sizeof(float));
+    // // 得到最近的细聚类中心
+    // float* d_dis_matrix_fine;
+    // cudaMalloc((void**)&d_dis_matrix_fine, numQueries * numFineCentroid_ * sizeof(float));
 
-    deviceQueryToBaseDistance(d_fine_codebook_, numFineCentroid_, d_fine_data,
-                         numQueries, dim_, d_dis_matrix_fine, 100000);
-    queryT.Stop();
-    std::cout<<"[RVQ] distance to fine centroids time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    // deviceQueryToBaseDistance(d_fine_codebook_, numFineCentroid_, d_fine_data,
+    //                      numQueries, dim_, d_dis_matrix_fine, 100000);
     
-    // 得到最近的细聚类中心
-    queryT.Start();
-    int* d_min_fine_indices;
-    cudaMalloc((void**)&d_min_fine_indices, numQueries * sizeof(int));
-    deviceFindMinIndices(d_dis_matrix_fine, numFineCentroid_, numQueries, d_min_fine_indices);
-    queryT.Stop();
-    std::cout<<"[RVQ] fine centroids findMinIndices time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    // // 得到最近的细聚类中心
+    // // int* d_min_fine_indices;
+    // // cudaMalloc((void**)&d_min_fine_indices, numQueries * sizeof(int));
+    // int* d_clusterSize;
+    // cudaMalloc((void**)&d_clusterSize, numCoarseCentroid_ * numFineCentroid_ * sizeof(int));
+    // cudaMemcpy(d_clusterSize, clusterSize, numCoarseCentroid_ * numFineCentroid_ * sizeof(int), cudaMemcpyHostToDevice);
+    // // for(int i = 0; i < numQueries; i++){
+    // //     printf("Q: %d, N: %d\n", i, clusterSize[i]);
+    // // }
+    // deviceFindMinIndices(d_min_coarse_indices, d_dis_matrix_fine, numFineCentroid_, numQueries, d_enter_cluster, d_clusterSize);
 
 
-    //Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
-    queryT.Start();
-    // addKernel进行加和
-    int blockSize = 256;
-    int numBlocks = (numQueries + blockSize - 1) / blockSize;
-    addKernel<<<numBlocks, blockSize>>>(d_min_coarse_indices, d_min_fine_indices, d_enter_cluster, numFineCentroid_, numQueries);
-    CUDA_SYNC_CHECK();
-
-    // for(idx_t i = 0; i < numQueries; ++i){
-    //     enter_cluster.push_back(minCoarseIndices[i] * numFineCentroid_ + minFineIndices[i]);
-    //     // if (i < 100){
-    //     //     printf("Query %d : coarseId = %d, fineId = %d\n", i, minCoarseIndices[i], minFineIndices[i]);
-    //     // }
-    // }
-    queryT.Stop();
-    std::cout<<"[RVQ] init result vector time: "<<queryT.DurationInMilliseconds()<<" ms"<<std::endl;
+    // // Todo: 得到minCoarseIndices和minFineIndices之后，需要进行什么操作？返回index？
+    // // addKernel进行加和
+    // // int blockSize = 256;
+    // // int numBlocks = (numQueries + blockSize - 1) / blockSize;
+    // // addKernel<<<numBlocks, blockSize>>>(d_min_coarse_indices, d_min_fine_indices, d_enter_cluster, numFineCentroid_, numQueries);
+    // // CUDA_SYNC_CHECK();
+    // cudaFree(d_dis_matrix_coarse);
+    // cudaFree(d_min_coarse_indices);
+    // cudaFree(d_fine_data);
+    // cudaFree(d_dis_matrix_fine);
+    // cudaFree(d_coarse_codebook_);
+    // cudaFree(d_fine_codebook_);
+    // cudaFree(d_clusterSize);
+    
 }
 
 void RVQ::save(const std::string& filename) {
@@ -662,18 +800,66 @@ void RVQ::save(const std::string& filename) {
 
     // 保存索引
     size_t outerSize = index_.size();
+    int cluster_id = 0;
     out.write(reinterpret_cast<char*>(&outerSize), sizeof(outerSize));
     for (const auto& inner : index_) {
         size_t innerSize = inner.size();
         out.write(reinterpret_cast<char*>(&innerSize), sizeof(innerSize));
         for (const auto& innerInner : inner) {
             size_t innerInnerSize = innerInner.size();
+            printf("Cluster id: %d, Points number: %lu\n", cluster_id++, innerInnerSize);
             out.write(reinterpret_cast<char*>(&innerInnerSize), sizeof(innerInnerSize));
             out.write(reinterpret_cast<char*>(const_cast<idx_t*>(innerInner.data())), innerInnerSize * sizeof(idx_t));
         }
     }
 
     out.close();
+}
+
+void RVQ::saveSubgraphData(float* sub_data, std::vector<std::vector<int>> &num_of_subgraph_points, idx_t numBatchPoints, int outIteration){
+    int offset = numBatchPoints * outIteration;
+    for(int i = 0; i < index_.size(); i++){
+        for(int l = 0; l < index_[i].size(); l++){
+            int end = index_[i][l].size();
+            if(end == num_of_subgraph_points[i][l]) continue;
+            std::ostringstream filename;
+            filename << "/home/ErHa/GANNS_Res/subdata/subData" << std::setw(4) << std::setfill('0') << i * numFineCentroid_ + l << ".bin";
+            std::ofstream file(filename.str(), std::ios::binary | std::ios::app);
+            if(file.tellp() == 0){
+                file.write(reinterpret_cast<char*>(&dim_), sizeof(int));
+            }
+            for(int start = num_of_subgraph_points[i][l]; start < end; start++){
+                int id = index_[i][l][start] - offset;
+                // file.write(reinterpret_cast<char*>(&dim_), sizeof(int));
+                file.write(reinterpret_cast<char*>(sub_data + id * dim_), sizeof(float) * dim_);
+            }
+            num_of_subgraph_points[i][l] = index_[i][l].size();
+            file.close();
+        }
+    }
+}
+
+void RVQ::saveSubgraphIndex(int numPoints){
+    printf("Save subgraph index\n");
+    int num_of_cluster = numCoarseCentroid_ * numFineCentroid_;
+    int* preFixSizeSubgraph = new int[num_of_cluster + 1]();
+    
+    std::ofstream file2("/home/ErHa/GANNS_Res/subdata/new_index_of_data.bin", std::ios::binary);
+    // file2.write(reinterpret_cast<char*>(&numPoints), sizeof(int));
+
+    for(int i = 0; i < index_.size(); i++){
+        for(int l = 0; l < index_[i].size(); l++){
+            file2.write(reinterpret_cast<char*>(index_[i][l].data()), sizeof(int) * index_[i][l].size());
+            preFixSizeSubgraph[i * numFineCentroid_ + l + 1] = preFixSizeSubgraph[i * numFineCentroid_ + l] + index_[i][l].size();
+            // printf("Subdata %d size: %d\n", i * numFineCentroid_ + l, index_[i][l].size());
+        }
+    }
+    file2.close();
+    printf("There are %d points in total\n",preFixSizeSubgraph[num_of_cluster]);
+    std::ofstream file1("/home/ErHa/GANNS_Res/subdata/pre_fix_of_subgraph_size.bin", std::ios::binary);
+    file1.write(reinterpret_cast<char*>(&(num_of_cluster)), sizeof(int));
+    file1.write(reinterpret_cast<char*>(preFixSizeSubgraph), sizeof(int) * (num_of_cluster + 1));
+    file1.close();
 }
 
 void RVQ::load(const std::string& filename) {
@@ -701,8 +887,11 @@ void RVQ::load(const std::string& filename) {
     in.read(reinterpret_cast<char*>(fineCodebook_), numFineCentroid_ * dim_ * sizeof(float));
 
     // 加载索引
+    int max_size = 0;
+    int zero_cluster = 0;
     size_t outerSize;
     in.read(reinterpret_cast<char*>(&outerSize), sizeof(outerSize));
+    int i = 0;
     index_.resize(outerSize);
     for (auto& inner : index_) {
         size_t innerSize;
@@ -711,15 +900,24 @@ void RVQ::load(const std::string& filename) {
         for (auto& innerInner : inner) {
             size_t innerInnerSize;
             in.read(reinterpret_cast<char*>(&innerInnerSize), sizeof(innerInnerSize));
+            if(innerInnerSize == 0) zero_cluster++;
+            if(innerInnerSize > max_size) max_size = innerInnerSize;
+            clusterSize[i++] = int(innerInnerSize);
             innerInner.resize(innerInnerSize);
             in.read(reinterpret_cast<char*>(innerInner.data()), innerInnerSize * sizeof(idx_t));
         }
     }
-
+    // printf("Points in coarseCodebook:");
+    // for(i = 0; i < numCoarseCentroid_; i++){
+    //     std::cout<<points_in_coarseCodebook[i]<<" ";
+    // }
+    printf("\n");
+    printf("Max cluster size:%d\n",max_size);
+    printf("Num of zero cluster:%d\n",zero_cluster);
     in.close();
 
     // index复制到device
-    copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_, d_index_);
+    // copyIndexToGPU(index_, numCoarseCentroid_, numFineCentroid_, d_index_);
     // 粗码本和细码本复制到device
     cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
     cudaMemcpy(d_coarse_codebook_, coarseCodebook_, numCoarseCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
@@ -728,79 +926,211 @@ void RVQ::load(const std::string& filename) {
     cudaMemcpy(d_fine_codebook_, fineCodebook_, numFineCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
 }
 
-int main() {
-    // Define parameters
-    int dim = 128; // Dimension of feature vectors
-    int numCoarseCentroids = 10; // Number of coarse centroids
-    int numFineCentroids = 10; // Number of fine centroids
-    int numTrainVectors = 1000; // Number of training vectors
-    int numQueries = 100; // Number of query vectors
-
-    // Generate random training data and query data
-    float* trainData = new float[numTrainVectors * dim];
-    float* queryData = new float[numQueries * dim];
-    fillWithRandom(trainData, numTrainVectors * dim);
-    fillWithRandom(queryData, numQueries * dim);
-
-    float *d_queries;
-    cudaMalloc((void **)&d_queries, sizeof(float) * numQueries * dim);
-    cudaMemcpy(d_queries, queryData, sizeof(float) * numQueries * dim, cudaMemcpyHostToDevice);
-
-    // Create RVQ object
-    RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
-
-    // Train RVQ
-    rvq.train(trainData, numTrainVectors);
-
-    // Build reverse index
-    rvq.build(trainData, numTrainVectors);
-
-    // // Search using queries
-    int* results;
-    cudaMalloc((void**)&results, numQueries * sizeof(int));
-    rvq.search(d_queries, numQueries, results);
-    cudaDeviceSynchronize();
-
-    // // Copy results from device to host
-    int* h_results = new int[numQueries];
-    cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
-
-    // // Display results
-    std::cout << "Search results: " << std::endl;
-    for (int i = 0; i < numQueries; ++i) {
-        std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
+void RVQ::loadCodebook(const std::string& filename){
+    //读取聚类中心
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        std::cerr << "Failed to open file for loading." << std::endl;
+        return;
     }
 
-    // // Get index and print statistics
-    // auto index = rvq.get_index();
-    // auto d_index = rvq.get_gpu_index();
-    // for (int i = 0; i < numCoarseCentroids; ++i) {
-    //     for (int j = 0; j < numFineCentroids; ++j) {
-    //         std::cout << "Coarse centroid " << i << ", Fine centroid " << j
-    //                   << " has " << index[i][j].size() << " points." << std::endl;
-    //     }
-    // }
-    
-    rvq.save("rvq_model.bin");
+    // 加载维度、聚类中心数量
+    in.read(reinterpret_cast<char*>(&dim_), sizeof(dim_));
+    in.read(reinterpret_cast<char*>(&numCoarseCentroid_), sizeof(numCoarseCentroid_));
+    in.read(reinterpret_cast<char*>(&numFineCentroid_), sizeof(numFineCentroid_));
 
-    RVQ rvq_loaded(dim, numCoarseCentroids, numFineCentroids);
-    rvq_loaded.load("rvq_model.bin");
-    cudaMalloc((void **)&d_queries, sizeof(float) * numQueries * dim);
-    cudaMemcpy(d_queries, queryData, sizeof(float) * numQueries * dim, cudaMemcpyHostToDevice);
-    rvq_loaded.search(d_queries, numQueries, results);
+    // 分配内存
+    delete[] coarseCodebook_;
+    delete[] fineCodebook_;
+    coarseCodebook_ = new float[numCoarseCentroid_ * dim_];
+    fineCodebook_ = new float[numFineCentroid_ * dim_];
 
-    // // Copy results from device to host
-    // cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+    // 加载粗聚类中心
+    in.read(reinterpret_cast<char*>(coarseCodebook_), numCoarseCentroid_ * dim_ * sizeof(float));
 
-    // // Display results
-    std::cout << "Search results: " << std::endl;
-    for (int i = 0; i < numQueries; ++i) {
-        std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
-    }
+    // 加载细聚类中心
+    in.read(reinterpret_cast<char*>(fineCodebook_), numFineCentroid_ * dim_ * sizeof(float));
+    in.close();
 
-    // Clean up
-    // delete[] trainData;
-    // delete[] queryData;
+    // 拷贝粗码本和细码本到GPU
+    cudaMalloc(&d_coarse_codebook_, numCoarseCentroid_ * dim_ * sizeof(float));
+    cudaMemcpy(d_coarse_codebook_, coarseCodebook_, numCoarseCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
 
-    return 0;
+    cudaMalloc(&d_fine_codebook_, numFineCentroid_ * dim_ * sizeof(float));
+    cudaMemcpy(d_fine_codebook_, fineCodebook_, numFineCentroid_ * dim_ * sizeof(float), cudaMemcpyHostToDevice);
 }
+
+// 分配并拷贝索引数据到GPU端
+void RVQ::copyIndexToGPU(GPUIndex* d_index, int num_of_query, int* cluster_of_query, int dim) {
+
+    d_index->numCoarseCentroids = numCoarseCentroid_;
+    d_index->numFineCentroids = numFineCentroid_;
+    // 分配指针数组
+    int** hostIndices = new int*[num_of_query];
+    // float** hostData = new float*[num_of_query];
+    int* hostSizes = new int[num_of_query];
+    // std::ifstream in("/data/szr/dataset/sift1b/graph/starlinggraph/starlingIndex.bin", std::ios::binary);
+    // int* starling_index = new int[1000000000];
+    // in.read((char*)starling_index, size_t(1000000000) * sizeof(int));
+    // in.close();
+    // 分配数据并拷贝到GPU
+    for(int i = 0; i < num_of_query; i++){
+        int idx = cluster_of_query[i];
+        // printf("idx: %d\n",idx);
+        int coarse_id = idx / numFineCentroid_;
+        int fine_id = idx % numFineCentroid_;
+        hostSizes[i] = index_[coarse_id][fine_id].size() > 4096 ? 4096 : index_[coarse_id][fine_id].size();
+        if (hostSizes[i] > 0) {
+            // printf("Query: %d, Cluster: %d, Points number: %d\n", i, idx, hostSizes[i]);
+            // for(int l = 0; l < hostSizes[i]; l++){
+            //     index_[coarse_id][fine_id][l] = starling_index[index_[coarse_id][fine_id][l]];
+            // }
+            cudaMalloc((void**)&hostIndices[i], hostSizes[i] * sizeof(idx_t));
+            cudaMemcpy(hostIndices[i], index_[coarse_id][fine_id].data(), hostSizes[i] * sizeof(idx_t), cudaMemcpyHostToDevice);
+            // cudaMalloc((void**)&hostData[i], size_t(dim) * size_t(hostSizes[i]) * sizeof(float));
+            // std::ostringstream cluster_data_filename;
+            // cluster_data_filename << "subData" << std::setw(4) << std::setfill('0') << idx << ".bin";
+            // std::string subgraph_data_path = "/home/ErHa/GANNS_Res/subdata/" + cluster_data_filename.str();
+            // std::ifstream in(subgraph_data_path, std::ios::binary);
+            // float* h_data = new float[size_t(dim) * size_t(hostSizes[i])];
+            // in.read((char*)h_data, size_t(dim) * size_t(hostSizes[i]) * sizeof(float));
+            // in.close();
+            // cudaMemcpy(hostData[i], h_data, size_t(dim) * size_t(hostSizes[i]) * sizeof(float), cudaMemcpyHostToDevice);
+        } else {
+            hostIndices[i] = nullptr;
+            // hostData[i] = nullptr;
+        }
+    }
+
+    // 分配GPU端指针
+    int** deviceIndices;
+    cudaMalloc((void**)&deviceIndices, num_of_query * sizeof(int*));
+    // float** deviceData;
+    // cudaMalloc((void**)&deviceData, num_of_query * sizeof(float*));
+    int* deviceSizes;
+    cudaMalloc((void**)&deviceSizes, num_of_query * sizeof(int));
+
+    // 拷贝指针数组到GPU
+    cudaMemcpy(deviceIndices, hostIndices, num_of_query * sizeof(int*), cudaMemcpyHostToDevice);
+    // cudaMemcpy(deviceData, hostData, num_of_query * sizeof(float*), cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceSizes, hostSizes, num_of_query * sizeof(int), cudaMemcpyHostToDevice);
+
+    // 设置 GPUIndex 的成员
+    d_index->indices = deviceIndices;
+    // d_index->data = deviceData;
+    d_index->sizes = deviceSizes;
+
+    // 释放临时数组
+    delete[] hostIndices;
+    delete[] hostSizes;
+    // delete[] starling_index;
+}
+__global__ void populate_warmup_vectors(float *d_warmup_vectors, float* d_coarse_codebook, float* d_fine_codebook, int num_of_warmup_vectors, 
+                                        int numCoarseCentroid, int numFineCentroid, int dim){
+    int t_id = threadIdx.x;
+    int b_id = blockIdx.x;
+    int block_size = blockDim.x;
+    int grid_size = gridDim.x;
+    for(int i = 0; i < (num_of_warmup_vectors + grid_size - 1) / grid_size; i++){
+        int vector_id = b_id + i * grid_size;
+        if(vector_id < num_of_warmup_vectors){
+            float *warmup_vectors_loc = d_warmup_vectors + vector_id * dim;
+            float *coarse_codebook_loc = d_coarse_codebook + (vector_id / numFineCentroid) * dim;
+            float *fine_codebook_loc = d_fine_codebook + (vector_id % numFineCentroid) * dim;
+            for(int l = 0; l < (dim + block_size - 1) / block_size; l++){
+                int idx = t_id + l * block_size;
+                if(idx < dim){
+                   warmup_vectors_loc[idx] = coarse_codebook_loc[idx] + fine_codebook_loc[idx]; 
+                }
+            }
+        }
+
+    }
+}
+void RVQ::get_warmup_vectors(float *&d_warmup_vectors, int &num_of_warmup_vectors){
+    float* d_coarse_codebook = d_coarse_codebook_;
+    float* d_fine_codebook = d_fine_codebook_;
+    num_of_warmup_vectors = numCoarseCentroid_ * numFineCentroid_;
+    cudaMalloc((void**)&d_warmup_vectors, dim_ * num_of_warmup_vectors * sizeof(float));
+    populate_warmup_vectors<<<10000, 32>>>(d_warmup_vectors, d_coarse_codebook,  d_fine_codebook, num_of_warmup_vectors, numCoarseCentroid_, 
+                                            numFineCentroid_, dim_);
+}
+
+
+
+// int main() {
+//     // Define parameters
+//     int dim = 128; // Dimension of feature vectors
+//     int numCoarseCentroids = 10; // Number of coarse centroids
+//     int numFineCentroids = 10; // Number of fine centroids
+//     int numTrainVectors = 1000; // Number of training vectors
+//     int numQueries = 100; // Number of query vectors
+
+//     // Generate random training data and query data
+//     float* trainData = new float[numTrainVectors * dim];
+//     float* queryData = new float[numQueries * dim];
+//     fillWithRandom(trainData, numTrainVectors * dim);
+//     fillWithRandom(queryData, numQueries * dim);
+
+//     float *d_queries;
+//     cudaMalloc((void **)&d_queries, sizeof(float) * numQueries * dim);
+//     cudaMemcpy(d_queries, queryData, sizeof(float) * numQueries * dim, cudaMemcpyHostToDevice);
+
+//     // Create RVQ object
+//     RVQ rvq(dim, numCoarseCentroids, numFineCentroids);
+
+//     // Train RVQ
+//     rvq.train(trainData, numTrainVectors);
+
+//     // Build reverse index
+//     rvq.build(trainData, numTrainVectors);
+
+//     // // Search using queries
+//     int* results;
+//     cudaMalloc((void**)&results, numQueries * sizeof(int));
+//     rvq.search(d_queries, numQueries, results);
+//     cudaDeviceSynchronize();
+
+//     // // Copy results from device to host
+//     int* h_results = new int[numQueries];
+//     cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+
+//     // // Display results
+//     std::cout << "Search results: " << std::endl;
+//     for (int i = 0; i < numQueries; ++i) {
+//         std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
+//     }
+
+//     // // Get index and print statistics
+//     // auto index = rvq.get_index();
+//     // auto d_index = rvq.get_gpu_index();
+//     // for (int i = 0; i < numCoarseCentroids; ++i) {
+//     //     for (int j = 0; j < numFineCentroids; ++j) {
+//     //         std::cout << "Coarse centroid " << i << ", Fine centroid " << j
+//     //                   << " has " << index[i][j].size() << " points." << std::endl;
+//     //     }
+//     // }
+    
+//     rvq.save("rvq_model.bin");
+
+//     RVQ rvq_loaded(dim, numCoarseCentroids, numFineCentroids);
+//     rvq_loaded.load("rvq_model.bin");
+//     cudaMalloc((void **)&d_queries, sizeof(float) * numQueries * dim);
+//     cudaMemcpy(d_queries, queryData, sizeof(float) * numQueries * dim, cudaMemcpyHostToDevice);
+//     rvq_loaded.search(d_queries, numQueries, results);
+
+//     // // Copy results from device to host
+//     // cudaMemcpy(h_results, results, numQueries * sizeof(int), cudaMemcpyDeviceToHost);
+
+//     // // Display results
+//     std::cout << "Search results: " << std::endl;
+//     for (int i = 0; i < numQueries; ++i) {
+//         std::cout << "Query " << i << ": Cluster " << h_results[i] << std::endl;
+//     }
+
+//     // Clean up
+//     // delete[] trainData;
+//     // delete[] queryData;
+
+//     return 0;
+// }

@@ -2,21 +2,28 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <algorithm>
-#include "graph_index/data.h"
-#include "graph_index/navigable_small_world.h"
+#include "graph/graph_index/data.h"
+#include "graph/subgraph_build_merge/subgraph_operation.cuh"
 
 using namespace std;
 
 int main(int argc,char** argv){
-
+    cudaSetDevice(1);
     //required variables from external input
     string base_path = argv[1];
-    int num_of_candidates = atoi(argv[2]);
-    int num_of_initial_neighbors = atoi(argv[3]);
-    int num_of_points = atoi(argv[4]);
-
-    cout << "Load data points..." << endl << endl;
+    string subgraph_path = argv[2];
+    string final_graph_path = argv[3];
+    int num_of_candidates = atoi(argv[4]);
+    int num_of_initial_neighbors = atoi(argv[5]);
+    int num_of_points = atoi(argv[6]);
+    int k = atoi(argv[7]);
+    // subgraph* sg;
+    // sg = new subgraph(base_path, subgraph_path, final_graph_path);
+    // sg->subgraphBuild(num_of_candidates, num_of_initial_neighbors, num_of_points, k);
+    
     Data* points = new Data(base_path,num_of_points);
 
     GraphWrapper* graph;
@@ -27,8 +34,8 @@ int main(int argc,char** argv){
     
     cout << "Save proximity graph ..." << endl << endl;
     string graph_path="/home/ErHa/GANNS_Res/bigann_base.bvecs";
-    string graph_name = graph_path+"_"+argv[2]+"_"+argv[3]+"_"+to_string(num_of_points/1000000)+"M"+".nsw";
-    graph->Dump(graph_name);
+    string graph_name = graph_path+"_"+argv[4]+"_"+argv[5]+"_"+to_string(num_of_points/1000000)+"M"+".nsw";
+    graph->Dump(graph_name, num_of_initial_neighbors);
     cout << "Done" << endl;
     
     return 0;

@@ -28,7 +28,7 @@ void SortNeighborsonLocalGraph(KernelPair<float, int>* neighbors, KernelPair<flo
         
         KernelPair<float, int>* crt_distances = distance_matrix;
 
-        KernelPair<float, int>* crt_old_neighbors = old_neighbors + (crt_point_id << offset_shift);
+        // KernelPair<float, int>* crt_old_neighbors = old_neighbors + (crt_point_id << offset_shift);
 
         //compute neighbors of small world graph from distances of pairs with other nodes in the local graph
         int num_of_sequences_with_fixed_size = (crt_point_id % num_of_points_one_batch + length_of_sequence - 1) / length_of_sequence;
@@ -40,7 +40,7 @@ void SortNeighborsonLocalGraph(KernelPair<float, int>* neighbors, KernelPair<flo
                 if (unrollt_id < crt_point_id % num_of_points_one_batch) {
                     neighbors_array[unrollt_id] = crt_distances[unrollt_id];
                 } else {
-                    neighbors_array[unrollt_id].first = Max;
+                    neighbors_array[unrollt_id].first = MAX;
                     neighbors_array[unrollt_id].second = total_num_of_points;
                 }
             }
@@ -89,7 +89,7 @@ for (; step_id <= num_of_candidates / 2; step_id *= 2) {
                     neighbors_array[unroll_local_t_id + length_of_sequence] = crt_distances[unrollt_id];
                 } else {
                     if (unroll_local_t_id < length_of_sequence) {
-                        neighbors_array[unroll_local_t_id + length_of_sequence].first = Max;
+                        neighbors_array[unroll_local_t_id + length_of_sequence].first = MAX;
                         neighbors_array[unroll_local_t_id + length_of_sequence].second = total_num_of_points;
                     }
                 }
@@ -166,23 +166,29 @@ for (; substep_id >= 1; substep_id /= 2) {
 
         }
 
+        // for (int j = 0; j < (length_of_sequence + size_of_warp - 1) / size_of_warp; j++) {
+        //     int unrollt_id = j * size_of_warp + t_id;
+        //     if (unrollt_id < length_of_sequence) {
+        //         crt_old_neighbors[unrollt_id] = neighbors_array[unrollt_id];
+        //     }
+        // }
+
+        KernelPair<float, int>* crt_neighbors = neighbors + (size_t(crt_point_id) << offset_shift);
         for (int j = 0; j < (length_of_sequence + size_of_warp - 1) / size_of_warp; j++) {
             int unrollt_id = j * size_of_warp + t_id;
             if (unrollt_id < length_of_sequence) {
-                crt_old_neighbors[unrollt_id] = neighbors_array[unrollt_id];
+                crt_neighbors[unrollt_id] = neighbors_array[unrollt_id];
             }
         }
 
-        KernelPair<float, int>* crt_neighbors = neighbors + (crt_point_id << offset_shift);
-
-        //initialise neighbors between initial neighbors and maximal neighbors
+        //initialise neighbors between initial neighbors and MAXimal neighbors
         for (int j = 0; j < (length_of_sequence + size_of_warp - 1) / size_of_warp; j++) {
             int unrollt_id = j * size_of_warp + t_id;
             if (unrollt_id < length_of_sequence) {
-                crt_old_neighbors[length_of_sequence + unrollt_id].first = Max;
-                crt_old_neighbors[length_of_sequence + unrollt_id].second = total_num_of_points;
+                // crt_old_neighbors[length_of_sequence + unrollt_id].first = MAX;
+                // crt_old_neighbors[length_of_sequence + unrollt_id].second = total_num_of_points;
 
-                crt_neighbors[length_of_sequence + unrollt_id].first = Max;
+                crt_neighbors[length_of_sequence + unrollt_id].first = MAX;
                 crt_neighbors[length_of_sequence + unrollt_id].second = total_num_of_points;
             }
         }

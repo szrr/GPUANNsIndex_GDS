@@ -1,0 +1,1 @@
+-I/opt/intel/oneapi/mkl/latest/include -I/home/ErHa/GPUANNsIndex_GDS11.28/anns/build/bam/include -I/home/ErHa/GPUANNsIndex_GDS11.28/anns/bam/include -I/home/ErHa/GPUANNsIndex_GDS11.28/anns/bam/include/freestanding/include -I"/usr/local/cuda-12.3/include"

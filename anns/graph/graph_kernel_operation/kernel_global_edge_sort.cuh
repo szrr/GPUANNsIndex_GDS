@@ -14,7 +14,7 @@ void GlobalEdgesSort(KernelPair<float, int>* neighbors, Edge* edge_list, int* fl
     if(t_id_global >= num_of_valid_edges){
         edge_list[t_id_global].source_point = total_num_of_points;
         edge_list[t_id_global].target_point = total_num_of_points;
-        edge_list[t_id_global].distance = Max;
+        edge_list[t_id_global].distance = MAX;
     }
     cg::sync(grid);
 
@@ -165,7 +165,7 @@ void GlobalEdgesSort(KernelPair<float, int>* neighbors, Edge* edge_list, int* fl
         edge_list[t_id].target_point = total_num_of_points;
         edge_list[t_id].source_pointIndex = -1;
         edge_list[t_id].target_pointIndex = -1;
-        edge_list[t_id].distance = Max;
+        edge_list[t_id].distance = MAX;
     }
 
     __syncthreads();

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <fstream>
 #include <cmath>
+#include "../../common.h"
 
 using namespace std;
 
@@ -75,31 +76,33 @@ public:
         ifstream in_descriptor(path, std::ios::binary);
         
         if (!in_descriptor.is_open()) {
+            printf("Failed open the data file\n");
             exit(1);
         }
 
-        int dim;
-        in_descriptor.read((char*)&dim, 4);
+        int dim = 128;
+        // in_descriptor.read((char*)&dim, 4);
         dim_of_point_=dim;
-        cout<<"Dim: "<<dim_of_point_<<endl;
+        // printf("Dim:%d \n ",dim_of_point_);
         //in_descriptor.seekg(0, std::ios::end);
         //long long file_size = in_descriptor.tellg(); 
         num_of_points_ = n;
-        data_ = new float[dim_of_point_ * num_of_points_];
+        size_t num_of_elements = size_t(dim_of_point_) * size_t(num_of_points_);
+        data_ = new float[num_of_elements];
         //memset(data_, 0, 4 * num_of_points_ * dim_of_point_);
     
-        in_descriptor.seekg(0, std::ios::beg);
-
-        for (int i = 0; i < num_of_points_; i++) {
-            unsigned char tmp_data[dim_of_point_];
-            in_descriptor.seekg(4, std::ios::cur);
-            //in_descriptor.read((char*)(data_ + i * dim_of_point_), dim_of_point_);
-            in_descriptor.read((char*)(tmp_data), dim_of_point_);
-            for(int l = 0;l < dim_of_point_; l++){
-                data_[i * dim_of_point_ + l] = float(tmp_data[l]);
-                //data_[i * dim_of_point_ + l]=1;
-            }
-        }
+        in_descriptor.read((char*)(data_), num_of_elements * sizeof(float));
+        // in_descriptor.seekg(0, std::ios::beg);
+        // for (int i = 0; i < num_of_points_; i++) {
+        //     unsigned char tmp_data[dim_of_point_];
+        //     in_descriptor.seekg(4, std::ios::cur);
+        //     // in_descriptor.read((char*)(data_ + i * dim_of_point_), dim_of_point_ * sizeof(float));
+        //     in_descriptor.read((char*)(tmp_data), dim_of_point_);
+        //     for(int l = 0;l < dim_of_point_; l++){
+        //         data_[i * dim_of_point_ + l] = float(tmp_data[l]);
+        //         //data_[i * dim_of_point_ + l]=1;
+        //     }
+        // }
         in_descriptor.close();
     }
 
@@ -111,9 +114,17 @@ public:
     Data(string path,int n){
         ReadVectorsFromFiles(path,n);
     }
-    
+    Data(int num_of_points, int dim_of_points){
+        this->dim_of_point_ = dim_of_points;
+        this->num_of_points_ = num_of_points;
+    }
+    ~Data(){
+        if(data_ != nullptr){
+            delete data_;
+        }
+    }
     float* GetFirstPositionofPoint(int point_id) {
-        return data_ + point_id * dim_of_point_;
+        return data_ + size_t(point_id) * size_t(dim_of_point_);
     }
 
     float L2Distance(float* a, float* b) {

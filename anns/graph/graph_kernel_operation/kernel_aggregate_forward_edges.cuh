@@ -17,7 +17,7 @@ void AggragateForwardEdges (KernelPair<float, int>* neighbors, Edge* edge_list, 
     
     int num_of_valid_edges = last_position_of_edges - first_position_of_edges;
     
-    int target_point_id = edge_list[first_position_of_edges].target_point;
+    size_t target_point_id = size_t(edge_list[first_position_of_edges].target_point);
 
     int step_id;
     int substep_id;
@@ -41,7 +41,7 @@ void AggragateForwardEdges (KernelPair<float, int>* neighbors, Edge* edge_list, 
                 neighbors_array[num_of_visited_points_one_batch + num_of_visited_points_one_batch - unrollt_id - 1].first = edge_list[first_position_of_edges + unrollt_id].distance;
             } else if (unrollt_id >= num_of_valid_edges && unrollt_id < num_of_visited_points_one_batch) {
                 neighbors_array[num_of_visited_points_one_batch + num_of_visited_points_one_batch - unrollt_id - 1].second = total_num_of_points;
-                neighbors_array[num_of_visited_points_one_batch + num_of_visited_points_one_batch - unrollt_id - 1].first = Max;
+                neighbors_array[num_of_visited_points_one_batch + num_of_visited_points_one_batch - unrollt_id - 1].first = MAX;
             }
         }
 

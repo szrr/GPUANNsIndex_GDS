@@ -4,23 +4,24 @@
 __global__ 
 void LocalGraphMergence(KernelPair<float, int>* d_neighbors, KernelPair<float, int>* d_neighbors_backup, int total_num_of_points, 
                                         	float* d_data, Edge* edge_list, int batch_id, int num_of_points_one_batch, int num_of_elements_array, int num_of_visited_points_one_batch, int num_of_candidates, 
-                                            int num_of_initial_neighbors, int offset_shift, unsigned long long int* block_time_recorder){
-	int t_id = threadIdx.x;
-    int b_id = blockIdx.x;
+                                            int num_of_initial_neighbors, int offset_shift){
+	size_t t_id = threadIdx.x;
+    size_t b_id = blockIdx.x;
     int size_of_warp = 32;
 
     extern __shared__ KernelPair<float, int> shared_memory_space_lgm[];
     KernelPair<float, int>* neighbors_array = shared_memory_space_lgm;
     int* flags = (int*)(shared_memory_space_lgm + num_of_elements_array);
 
-    int crt_point_id = batch_id * num_of_points_one_batch + b_id;
+    size_t crt_point_id = size_t(batch_id) * size_t(num_of_points_one_batch) + b_id;
     
     if (crt_point_id >= total_num_of_points) {
         return;
     }
 
     KernelPair<float, int>* crt_neighbor = d_neighbors + (crt_point_id << offset_shift);
-    KernelPair<float, int>* crt_old_neighbors = d_neighbors_backup + (crt_point_id << offset_shift);
+    // KernelPair<float, int>* crt_old_neighbors = d_neighbors_backup + (crt_point_id << offset_shift);
+    KernelPair<float, int>* crt_old_neighbors = d_neighbors_backup + (b_id << offset_shift);
 
 #if DIM > 0
 	float q1 = 0;
@@ -224,7 +225,7 @@ void LocalGraphMergence(KernelPair<float, int>* d_neighbors, KernelPair<float, i
         if (unrollt_id < num_of_candidates + num_of_visited_points_one_batch) {
             flags[unrollt_id] = 0;
 
-            neighbors_array[unrollt_id].first = Max;
+            neighbors_array[unrollt_id].first = MAX;
             neighbors_array[unrollt_id].second = total_num_of_points;
         }
     }
@@ -236,7 +237,7 @@ void LocalGraphMergence(KernelPair<float, int>* d_neighbors, KernelPair<float, i
 
     __syncthreads();
 
-    int target_point_id = 0;
+    size_t target_point_id = 0;
     
 #if DIM > 0
 	float p1 = 0;
@@ -1161,7 +1162,7 @@ void LocalGraphMergence(KernelPair<float, int>* d_neighbors, KernelPair<float, i
             flags[first_position_of_flag] = 0;
         }
 
-        auto offset = neighbors_array[first_position_of_flag].second << offset_shift;
+        auto offset = size_t(neighbors_array[first_position_of_flag].second) << offset_shift;
         
         for (int i = 0; i < (num_of_visited_points_one_batch + size_of_warp - 1) / size_of_warp; i++) {
             int unrollt_id = t_id + size_of_warp * i;
@@ -1172,10 +1173,10 @@ void LocalGraphMergence(KernelPair<float, int>* d_neighbors, KernelPair<float, i
         }
 
         for (int i = 0; i < num_of_visited_points_one_batch; i++) {
-            int target_point_id = neighbors_array[num_of_candidates + i].second;
+            size_t target_point_id = size_t(neighbors_array[num_of_candidates + i].second);
             
             if (target_point_id >= total_num_of_points) {
-                neighbors_array[num_of_candidates + i].first = Max;
+                neighbors_array[num_of_candidates + i].first = MAX;
                 continue;
             }
             
@@ -2123,13 +2124,13 @@ for (int temparory_id = 0; temparory_id < (num_of_visited_points_one_batch + siz
         }
         if (flag_of_find != -1) {
             if (neighbors_array[num_of_candidates + unrollt_id].second == neighbors_array[flag_of_find].second) {
-                neighbors_array[num_of_candidates + unrollt_id].first = Max;
+                neighbors_array[num_of_candidates + unrollt_id].first = MAX;
             } else {
                 int position_of_find_element = flag_of_find + 1;
 
                 while (neighbors_array[position_of_find_element].first == neighbors_array[num_of_candidates + unrollt_id].first) {
                     if (neighbors_array[num_of_candidates + unrollt_id].second == neighbors_array[position_of_find_element].second) {
-                        neighbors_array[num_of_candidates + unrollt_id].first = Max;
+                        neighbors_array[num_of_candidates + unrollt_id].first = MAX;
                         break;
                     }
                     position_of_find_element++;
@@ -2252,51 +2253,51 @@ for (; substep_id >= 1; substep_id /= 2) {
         }
     }
 
-for (int temparory_id = 0; temparory_id < (length_of_compared_list + size_of_warp - 1) / size_of_warp; temparory_id++) {
-    int unrollt_id = num_of_candidates - length_of_compared_list + t_id + size_of_warp * temparory_id;
-    if (unrollt_id < num_of_candidates) {
-        if (neighbors_array[unrollt_id].first > neighbors_array[unrollt_id + num_of_visited_points_one_batch].first) {
-            temporary_neighbor = neighbors_array[unrollt_id];
-            neighbors_array[unrollt_id] = neighbors_array[unrollt_id + num_of_visited_points_one_batch];
-            neighbors_array[unrollt_id + num_of_visited_points_one_batch] = temporary_neighbor;
-            
-            temporary_flag = flags[unrollt_id];
-            flags[unrollt_id] = flags[unrollt_id + num_of_visited_points_one_batch];
-            flags[unrollt_id + num_of_visited_points_one_batch] = temporary_flag;
+    for (int temparory_id = 0; temparory_id < (length_of_compared_list + size_of_warp - 1) / size_of_warp; temparory_id++) {
+        int unrollt_id = num_of_candidates - length_of_compared_list + t_id + size_of_warp * temparory_id;
+        if (unrollt_id < num_of_candidates) {
+            if (neighbors_array[unrollt_id].first > neighbors_array[unrollt_id + num_of_visited_points_one_batch].first) {
+                temporary_neighbor = neighbors_array[unrollt_id];
+                neighbors_array[unrollt_id] = neighbors_array[unrollt_id + num_of_visited_points_one_batch];
+                neighbors_array[unrollt_id + num_of_visited_points_one_batch] = temporary_neighbor;
+                
+                temporary_flag = flags[unrollt_id];
+                flags[unrollt_id] = flags[unrollt_id + num_of_visited_points_one_batch];
+                flags[unrollt_id + num_of_visited_points_one_batch] = temporary_flag;
+            }
         }
     }
-}
 
-step_id = num_of_candidates / 2;
-substep_id = num_of_candidates / 2;
-for (; substep_id >= 1; substep_id /= 2) {
-    for (int temparory_id = 0; temparory_id < (num_of_candidates / 2 + size_of_warp - 1) / size_of_warp; temparory_id++) {
-        int unrollt_id = ((t_id + size_of_warp * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_warp * temparory_id) & (substep_id - 1));
-        if (unrollt_id < num_of_candidates) {
-            if (((t_id + size_of_warp * temparory_id) / step_id) % 2 == 0) {
-                if (neighbors_array[unrollt_id].first > neighbors_array[unrollt_id + substep_id].first) {
-                    temporary_neighbor = neighbors_array[unrollt_id];
-                    neighbors_array[unrollt_id] = neighbors_array[unrollt_id + substep_id];
-                    neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+    step_id = num_of_candidates / 2;
+    substep_id = num_of_candidates / 2;
+    for (; substep_id >= 1; substep_id /= 2) {
+        for (int temparory_id = 0; temparory_id < (num_of_candidates / 2 + size_of_warp - 1) / size_of_warp; temparory_id++) {
+            int unrollt_id = ((t_id + size_of_warp * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_warp * temparory_id) & (substep_id - 1));
+            if (unrollt_id < num_of_candidates) {
+                if (((t_id + size_of_warp * temparory_id) / step_id) % 2 == 0) {
+                    if (neighbors_array[unrollt_id].first > neighbors_array[unrollt_id + substep_id].first) {
+                        temporary_neighbor = neighbors_array[unrollt_id];
+                        neighbors_array[unrollt_id] = neighbors_array[unrollt_id + substep_id];
+                        neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
 
-                    temporary_flag = flags[unrollt_id];
-                    flags[unrollt_id] = flags[unrollt_id + substep_id];
-                    flags[unrollt_id + substep_id] = temporary_flag;
-                }
-            } else {
-                if (neighbors_array[unrollt_id].first < neighbors_array[unrollt_id + substep_id].first) {
-                    temporary_neighbor = neighbors_array[unrollt_id];
-                    neighbors_array[unrollt_id] = neighbors_array[unrollt_id + substep_id];
-                    neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-                    
-                    temporary_flag = flags[unrollt_id];
-                    flags[unrollt_id] = flags[unrollt_id + substep_id];
-                    flags[unrollt_id + substep_id] = temporary_flag;
+                        temporary_flag = flags[unrollt_id];
+                        flags[unrollt_id] = flags[unrollt_id + substep_id];
+                        flags[unrollt_id + substep_id] = temporary_flag;
+                    }
+                } else {
+                    if (neighbors_array[unrollt_id].first < neighbors_array[unrollt_id + substep_id].first) {
+                        temporary_neighbor = neighbors_array[unrollt_id];
+                        neighbors_array[unrollt_id] = neighbors_array[unrollt_id + substep_id];
+                        neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                        
+                        temporary_flag = flags[unrollt_id];
+                        flags[unrollt_id] = flags[unrollt_id + substep_id];
+                        flags[unrollt_id + substep_id] = temporary_flag;
+                    }
                 }
             }
         }
     }
-}
 
 
     for (int i = 0; i < (num_of_initial_neighbors + size_of_warp - 1) / size_of_warp; i++) {
@@ -2306,7 +2307,7 @@ for (; substep_id >= 1; substep_id /= 2) {
         if (unrollt_id < num_of_initial_neighbors) {
             crt_neighbor[unrollt_id] = temporary_neighbor;
             
-            edge_list[b_id * num_of_initial_neighbors + unrollt_id].source_point = crt_point_id;
+            edge_list[b_id * num_of_initial_neighbors + unrollt_id].source_point = int(crt_point_id);
             edge_list[b_id * num_of_initial_neighbors + unrollt_id].target_point = temporary_neighbor.second;
             edge_list[b_id * num_of_initial_neighbors + unrollt_id].distance = temporary_neighbor.first;
         }

@@ -4,11 +4,11 @@
 __global__
 void DistanceMatrixComputation(float* d_data, int total_num_of_points, int num_of_points_one_batch, KernelPair<float, int>* distance_matrix, int batches){
 #define DIM 128
-    int t_id = threadIdx.x;
-    int b_id = blockIdx.x + gridDim.x * batches;
+    size_t t_id = size_t(threadIdx.x);
+    size_t b_id = size_t(blockIdx.x) + size_t(gridDim.x) * size_t(batches);
     
-    for (int i = 0; i < num_of_points_one_batch; i++) {
-        int crt_point_id = b_id * num_of_points_one_batch + i;
+    for (size_t i = 0; i < num_of_points_one_batch; i++) {
+        size_t crt_point_id = b_id * size_t(num_of_points_one_batch) + i;
 
         if (crt_point_id >= total_num_of_points) {
             break;
@@ -198,9 +198,9 @@ void DistanceMatrixComputation(float* d_data, int total_num_of_points, int num_o
 #endif
 
 
-        for (int j = i + 1; j < num_of_points_one_batch; j++) {
+        for (size_t j = i + 1; j < num_of_points_one_batch; j++) {
             
-            int target_point_id = b_id * num_of_points_one_batch + j;
+            size_t target_point_id = b_id * size_t(num_of_points_one_batch) + j;
 
             if(target_point_id >= total_num_of_points){
                 break;
@@ -1121,17 +1121,17 @@ void DistanceMatrixComputation(float* d_data, int total_num_of_points, int num_o
 
             if(t_id == 0){
                 crt_distance[j].first = dist;
-                crt_distance[j].second = target_point_id;
+                crt_distance[j].second = int(target_point_id);
 
                 (distance_matrix + j * num_of_points_one_batch)[i].first = dist;
-                (distance_matrix + j * num_of_points_one_batch)[i].second = crt_point_id;
+                (distance_matrix + j * num_of_points_one_batch)[i].second = int(crt_point_id);
             }
     
         }
 
         if(t_id == 0){
-            crt_distance[i].first = Max;
-            crt_distance[i].second = crt_point_id;
+            crt_distance[i].first = MAX;
+            crt_distance[i].second = int(crt_point_id);
         }
 
     }

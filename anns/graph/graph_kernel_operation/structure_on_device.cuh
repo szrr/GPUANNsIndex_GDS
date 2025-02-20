@@ -3,7 +3,7 @@
 #include<cuda_runtime.h>
 
 #define FULL_MASK 0xffffffff
-#define Max 0x1fffffff
+#define MAX 0x1fffffff
 
 template<class A,class B>
 struct KernelPair{
