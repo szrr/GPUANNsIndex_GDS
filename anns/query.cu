@@ -188,16 +188,24 @@ void read_data_point(const std::string& filepath, size_t target_id, size_t n, si
     file.close();
 }
 
-__global__ void read_test(array_d_t<char> *ssd_data, size_t n, size_t offset){
-    size_t t_id = threadIdx.x + blockIdx.x * blockDim.x;
-    size_t t_num = gridDim.x * blockDim.x;
-    for(size_t i = 0; i < (n + t_num - 1) / t_num; i++){
-        size_t idx = t_id + i * t_num;
-        if(idx < n){
-            char target = (*ssd_data)[idx * offset];
-        }
+__global__ void read_test(array_d_t<char> *ssd_data, size_t num_of_page_to_read_per_warp, size_t offset){
+    size_t t_id = threadIdx.x;
+    size_t b_id = size_t(blockIdx.x);
+    size_t size_of_block = blockDim.x;
+    size_t size_of_warp = 32;
+    size_t size_of_grid = gridDim.x;
+    size_t lane_id = size_t(threadIdx.x) % size_t(size_of_warp);
+    size_t warp_id = threadIdx.x / size_of_warp;
+    size_t warp_size = size_of_block / size_of_warp;
+    for(size_t i = 0; i < num_of_page_to_read_per_warp; i++){
+        size_t idx = size_of_grid * warp_size * i + b_id * warp_size + warp_id;
+        char target = (*ssd_data)[idx * offset];
+        // if(b_id == 0){
+        //     printf("t_id : %lu\n", t_id);
+        // }
     }
 }
+
 
 int main(int argc,char** argv){
     cudaSetDevice(3);
@@ -215,6 +223,8 @@ int main(int argc,char** argv){
     size_t max_page_size = stoul(argv[11]);
     size_t num_of_queues = stoul(argv[12]);
     size_t depth_of_queue = stoul(argv[13]);
+    size_t num_of_block = stoul(argv[14]);
+    size_t page_size = stoul(argv[15]);
 
     // cout << "Load groundtruth..." << endl;
     int* groundtruth = NULL;
@@ -228,11 +238,12 @@ int main(int argc,char** argv){
     cout << "Search...Query number: " <<query_points->GetNumPoints()<<" Num of candidates: "<<num_of_candidates<<endl;
 
     Settings settings;
+    settings.pageSize = page_size;
     settings.maxPageCacheSize = max_page_size;
     settings.numQueues = num_of_queues;
     settings.queueDepth = depth_of_queue;
     std::vector<Controller *> ctrls(settings.n_ctrls);
-    const char *const ctrls_paths[] = {"/dev/libnvm0"};
+    const char *const ctrls_paths[] = {"/dev/libnvm1"};
     ctrls[0] = new Controller(ctrls_paths[0], settings.nvmNamespace,
                               settings.cudaDevice, settings.queueDepth,
                               settings.numQueues);
@@ -249,13 +260,6 @@ int main(int argc,char** argv){
     size_t totalSize = settings.pageSize * data_pages;
     size_t num_of_data_elements = totalSize / sizeof(char);
     
-    // size_t elementSize = dim_of_points * sizeof(float) + degree_of_graph * sizeof(int) + sizeof(int);
-    // size_t numElementsPerBlock = 4096 / elementSize;
-    // size_t data_pages = ((num_of_points + numElementsPerBlock - 1) / numElementsPerBlock);
-    // size_t totalSize = 4096 * data_pages;
-    // data_pages /= (settings.pageSize / 4096);
-    // size_t num_of_data_elements = totalSize / sizeof(char);
-    
     // writeArray2Disk<char>(base_path, num_of_data_elements, 0, h_pc, d_pc, settings);
 
     range_t<char> *data_range = new range_t<char>(
@@ -268,38 +272,20 @@ int main(int argc,char** argv){
     vec_datarange[0] = data_range;
 
     array_t<char> *d_data_array = new array_t<char>(num_of_data_elements, 0, vec_datarange, settings.cudaDevice);
-    // size_t n = 1000000;
-    // Timer a;
-    // a.Start();
-    // read_test<<<10000, 32>>>(d_data_array->d_array_ptr, n, settings.pageSize);
-    // cudaDeviceSynchronize();
-    // a.Stop();
-    // cout << "Read " << n << " points, page size: " << settings.pageSize << ", use " << a.DurationInMilliseconds() << " ms" << endl;
-    // size_t test_id = 0;//655046862; //99999999
-    // size_t test_dim = size_t(dim_of_points);
-    // size_t test_nei = size_t(degree_of_graph);
-    // std::ifstream in("/mnt/Samsung980PRO2TB/szr/starling/bigann_100m_M256_R64_L100_B256/starlingIndex.bin", std::ios::binary);
-    // in.seekg(test_id * sizeof(int), std::ios::beg);
-    // int tmp_test_id;
-    // in.read((char*)(&tmp_test_id), sizeof(int));
-    // in.close();
-    // printf("%lu : %lu\n", test_id, tmp_test_id);
-    // read_data_kernel<<<1,test_dim + test_nei>>>(d_data_array->d_array_ptr, size_t(tmp_test_id), test_dim, test_nei, numElementsPerBlock);
-    // CUDA_SYNC_CHECK();
-    // read_data_point<float>("/data/szr/diskann/sift1b/SIFT1B_DATASET.bin", test_id, test_dim, 8);
-    // cout << "Load proximity graph..." << endl;
+
     Data* points = new Data(num_of_points, dim_of_points);
     hybrid* hybrid_graph;
     hybrid_graph =new hybrid(128, points, graph_path, 1000, 100, degree_of_graph, 64);
     // cout << "Train RVQ..." << endl;
 	// hybrid_graph->hybrid_train(base_path, num_of_points);
-    // hybrid_graph->hybrid_loadCodebook("/home/ErHa/GANNS_Res/rvq/Codebook_1000_100_500000_100M.bin");
+    // hybrid_graph->hybrid_loadCodebook("/home/ErHa/GANNS_Res/rvq/Codebook_100_100_1000000_100M.bin");
     // cout << "Build RVQ..." << endl;
-    // hybrid_graph->hybrid_build(base_path, num_of_points);
+    // hybrid_graph->hybrid_build("/data/szr/dataset/sift1b/bigann_base.fvecs", num_of_points);
     // cout << "Save RVQ..." << endl;
-    // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq/rvq_model_1000_100_500000_100M.bin");
+    // hybrid_graph->hybrid_save("/home/ErHa/GANNS_Res/rvq/rvq_model_100_100_1000000_100M.bin");
 
     cout << "Load RVQ..." << endl;
+    // hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq/rvq_model_100_100_1000000_100M.bin");
     hybrid_graph->hybrid_load("/home/ErHa/GANNS_Res/rvq/rvq_model_1000_100_500000_100M.bin");
 
     int* results = NULL;

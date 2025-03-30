@@ -75,7 +75,7 @@ public:
     void build(float* buildVectorData, idx_t numVectors, idx_t base_id);
 
     // 查询搜索
-    void search(float* query, int numQueries, int* cluster);
+    void search(float* query, int numQueries, int* cluster, int* rvqSize);
 
     void save(const std::string& filename);
     void saveSubgraphData(float* sub_data, std::vector<std::vector<int>> &num_of_subgraph_points, idx_t numBatchPoints, int outIteration);

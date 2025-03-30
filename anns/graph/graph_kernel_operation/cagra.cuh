@@ -35,13 +35,14 @@
 #include<cuda_runtime.h>
 #include "structure_on_device.cuh"
 // #define size32 153600
-// #define size32 262144
+// #define size32 25600
 #define size32 1024
-#define tmp_size32 25600
+// #define search_size32 25600
+#define tmp_size32 25600 //对应hash_size
 // #define shift 9
 const int shift = 9;
 // #define num_hash 3
-const int num_hash = 3;
+const int num_hash = 3; //几位标志一个hash
 
 __device__
 int hash_(int h,uint32_t x,uint32_t* random_number){ 

@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.21)
+
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.3/bin/nvcc")
 
 project(ANNSBaM LANGUAGES CXX CUDA C)
 
@@ -12,7 +14,7 @@ find_package (CUDA 8.0)
 
 add_definitions(-D__ATOMIC_THREAD=10)
 
-set (nvidia_archs "70;80;90" CACHE STRING "NVIDIA compute architectures")
+set (nvidia_archs "70;80;89" CACHE STRING "NVIDIA compute architectures")
 set (no_smartio_samples true CACHE BOOL "Do not use SISCI for examples")
 set (no_smartio_benchmarks true CACHE BOOL "Do not use SISCI for benchmarks")
 set (no_smartio true CACHE BOOL "Do not use SISCI for library or examples")
@@ -112,7 +114,7 @@ set(SOURCE_FILES
 
 add_executable(query ${SOURCE_FILES})
 
-target_link_libraries(query libnvm ${CUDA_LIBRARIES} -lcublas -L/opt/intel/oneapi/mkl/2024.2/lib -lmkl_rt -fopenmp)
+target_link_libraries(query libnvm ${CUDA_LIBRARIES} -lcublas -L/opt/intel/oneapi/mkl/2024.2/lib -lmkl_rt -fopenmp -lnvToolsExt)
 
 target_compile_definitions(query PRIVATE USE_L2_DIST_ _CUDA __CUDA__)
 

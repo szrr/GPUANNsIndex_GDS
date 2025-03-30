@@ -1,0 +1,4 @@
+[submodule "anns/bam"] 
+	path = anns/bam
+	url = git@github.com:ZaidQureshi/bam.git
+    

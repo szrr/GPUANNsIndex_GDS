@@ -1,4 +1,4 @@
-CMakeFiles/query.dir/functions/selectMin1.cu.o : /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/selectMin1.cu \
+CMakeFiles/query.dir/functions/selectMin1.cu.o : /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/selectMin1.cu \
     /usr/include/stdc-predef.h \
     /usr/local/cuda-12.3/include/cuda_runtime.h \
     /usr/local/cuda-12.3/include/crt/host_config.h \
@@ -258,5 +258,5 @@ CMakeFiles/query.dir/functions/selectMin1.cu.o : /home/ErHa/GPUANNsIndex_GDS11.2
     /usr/include/c++/11/bits/stl_vector.h \
     /usr/include/c++/11/bits/stl_bvector.h \
     /usr/include/c++/11/bits/vector.tcc \
-    /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/selectMin1.cuh \
+    /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/selectMin1.cuh \
     /usr/lib/gcc/x86_64-linux-gnu/11/include/float.h

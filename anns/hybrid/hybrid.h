@@ -140,20 +140,16 @@ void hybrid::hybrid_search(array_t<char> *ssd_data, float* queries, int topk, in
 
 
     Timer rvqSearch;
-    // int* test;
-    // cudaMalloc((void**)&test, num_queries * sizeof(int));
-    // rvq->search(d_queries, num_queries, test);
-    // cudaFree(test);
+    
+    GPUIndex* d_rvq_index = new GPUIndex;
+    // rvq->copyIndexToGPU(d_rvq_index, num_queries, h_enter_cluster, dim_);
+    rvq->copyIndexToGPU(d_rvq_index);
     rvqSearch.Start();
     int* d_enter_cluster;
     cudaMalloc((void**)&d_enter_cluster, num_queries * sizeof(int));
-    rvq->search(d_queries, num_queries, d_enter_cluster);
-    int* h_enter_cluster = new int[num_queries];
-    cudaMemcpy(h_enter_cluster, d_enter_cluster, sizeof(int) * num_queries, cudaMemcpyDeviceToHost);
-    GPUIndex* d_rvq_index = new GPUIndex;
-    // rvq->copyIndexToGPU(d_rvq_index, num_queries, h_enter_cluster, dim_);
+    rvq->search(d_queries, num_queries, d_enter_cluster, d_rvq_index->sizes);
     rvqSearch.Stop();
-    rvq->copyIndexToGPU(d_rvq_index);
+    
     int num_of_warmup_vectors = 0;
     float *d_warmup_vectors;
     rvq->get_warmup_vectors(d_warmup_vectors, num_of_warmup_vectors);

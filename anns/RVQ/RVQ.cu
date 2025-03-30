@@ -694,14 +694,14 @@ void RVQ::build(float* d_buildVectorData, num_t num, idx_t base_id) {
 }
 
 // 查询搜索
-void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster) {
+void RVQ::search(float* d_query, int numQueries, int* d_enter_cluster, int* rvqSize) {
     std::cout << "Searching with " << numQueries << " queries." << std::endl;
     constexpr int WARP_SIZE = 32;
     constexpr int NumWarpQ = 32;
     constexpr int NumThreadQ = 1;
     selectNearestCluster<int, float, WARP_SIZE, NumWarpQ, NumThreadQ><<<numQueries, 32, min(numCoarseCentroid_, NumWarpQ) * sizeof(KernelPair<float, int>)>>>(
                         d_query, d_coarse_codebook_, d_fine_codebook_, d_enter_cluster, numQueries,
-                        dim_, 1, numCoarseCentroid_, numFineCentroid_);
+                        dim_, 1, numCoarseCentroid_, numFineCentroid_, rvqSize);
 
     // 计算与粗聚类中心距离
     //Todo: modify queryToBaseDistance() input to GPU query input

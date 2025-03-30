@@ -26,7 +26,7 @@
 #include <util.h>
 #include <iostream>
 #include <byteswap.h>
-
+#include <nvToolsExt.h>
 
 #include <cuda_runtime.h>
 #include <vector>
@@ -58,6 +58,7 @@
 #include "../graph_kernel_operation/kernel_search_nsw.cuh"
 #include "../graph_kernel_operation/structure_on_device.cuh"
 #include "auto_tune_bloom.h"
+#include "data_transfer.h"
 
 #include "../graph_kernel_operation/bamWriteSSD.cuh"
 #include "../graph_kernel_operation/settings.cuh"
@@ -672,35 +673,6 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     int *d_starling_resver_index;
     // cudaMalloc(&d_starling_resver_index, size_t(total_num_of_points) * sizeof(int));
     // cudaMemcpy(d_starling_resver_index, starling_resver_index, size_t(total_num_of_points) * sizeof(int), cudaMemcpyHostToDevice);
-    
-    //IO test
-    // Timer IO_time;
-    // IO_time.Start();
-    // size_t num_of_reads = 2097152;//6815744;
-    // read_graph_kernel<<<10000, 32>>>(ssd_data->d_array_ptr, num_of_reads);
-    // CUDA_SYNC_CHECK();
-    // IO_time.Stop();
-    // std::cout<<"IO time: "<<IO_time.DurationInMilliseconds()<<" ms, Number of IOs: " << num_of_reads << ", " 
-    // << 1000 * IO_time.DurationInMilliseconds() / num_of_reads <<" us per IO, IOPS: " << num_of_reads / (IO_time.DurationInMilliseconds() / 1000)  << std::endl;
-    // ssd_data->print_reset_stats();
-
-    //prefetch
-    // Timer prefetch_time;
-    // prefetch_time.Start();
-    // size_t degree = size_t(1) << offset_shift;
-    // size_t hops = 5;
-    // size_t num_of_prefetch_points = degree * (pow(degree, hops) - size_t(1)) / (degree - 1);
-    // printf("degree: %lu, num_of_prefetch_points: %lu\n", degree, num_of_prefetch_points);
-    // int* id_array;
-    // cudaMalloc(&id_array, num_of_prefetch_points * sizeof(int));
-    // cudaMemset(id_array, 0, num_of_prefetch_points * sizeof(int));
-    // prefetch<<<1,degree>>>(ssd_data->d_array_ptr, id_array, degree, hops, size_t(dim_of_point), page_size, num_elements_per_block, d_starling_index);
-    // cudaFree(id_array);
-    // CUDA_SYNC_CHECK();
-
-    // prefetch_time.Stop();
-    // std::cout<<"Prefetch time: "<<prefetch_time.DurationInMilliseconds()<<" ms"<<std::endl;
-    // ssd_data->print_reset_stats();
 
 
     PQ* pq_index = new PQ();
@@ -734,16 +706,16 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     float *h_warmup_query = new float[num_of_warmup_query * dim_of_warmup_query];
     warmup_in.read((char*)h_warmup_query, num_of_warmup_query * dim_of_warmup_query * sizeof(float));
     warmup_in.close();
-    num_of_warmup_query = num_of_warmup_vectors;
+    // num_of_warmup_query = num_of_warmup_vectors;
     std::cout<<"Start warmup......Number of warmup query: "<< num_of_warmup_query <<std::endl;
 
     for(int i = 0; i < (num_of_warmup_query + warmup_batch_size - 1) / warmup_batch_size; i++){
         // std::cout<<"Warmup......Iteration: "<< i <<std::endl;
         int num_of_batch_query = min(warmup_batch_size, num_of_warmup_query - warmup_batch_size * i);
         float *d_warmup_query;
-        // cudaMalloc(&d_warmup_query, num_of_batch_query * dim_of_warmup_query * sizeof(float));
-        // cudaMemcpy(d_warmup_query, h_warmup_query + i * warmup_batch_size * dim_of_warmup_query, num_of_batch_query * dim_of_warmup_query * sizeof(float), cudaMemcpyHostToDevice);
-        d_warmup_query = d_warmup_vectors + i * warmup_batch_size * dim_of_warmup_query;
+        cudaMalloc(&d_warmup_query, num_of_batch_query * dim_of_warmup_query * sizeof(float));
+        cudaMemcpy(d_warmup_query, h_warmup_query + i * warmup_batch_size * dim_of_warmup_query, num_of_batch_query * dim_of_warmup_query * sizeof(float), cudaMemcpyHostToDevice);
+        // d_warmup_query = d_warmup_vectors + i * warmup_batch_size * dim_of_warmup_query;
         float *d_dist_vec;
         cudaMalloc(&d_dist_vec, size_t(num_of_batch_query) * NUM_PQ_CENTROIDS * pq_index->num_of_chunks * sizeof(float));
         cudaMemset(d_dist_vec, 0, size_t(num_of_batch_query) * NUM_PQ_CENTROIDS * pq_index->num_of_chunks * sizeof(float));
@@ -769,8 +741,9 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     ssd_data->print_reset_stats();
     std::cout<<"Warmup time: "<<warmup_time.DurationInMilliseconds()<<" ms"<<std::endl;
     
-    int num_of_cache_candidates = 1;
-    // num_of_cache_candidates = min(num_of_cache_candidates, num_of_candidates);
+    int num_of_cache_results = 1;
+    int num_of_cache_candidates = 16;
+    // num_of_cache_results = min(num_of_cache_results, num_of_candidates);
     float *h_cache_data;
     int *h_cache_graph;
     int *h_cache_tags;
@@ -791,14 +764,14 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     cudaMalloc(&d_cache_tags, size_t(num_of_cache_points) * sizeof(int));
     cudaMemcpy(d_cache_tags, h_cache_tags, size_t(num_of_cache_points) * sizeof(int), cudaMemcpyHostToDevice);
     int *d_cache_result;
-    cudaMalloc(&d_cache_result, size_t(num_of_cache_candidates) * size_t(num_of_query_points) * sizeof(int));
+    cudaMalloc(&d_cache_result, size_t(num_of_cache_results) * size_t(num_of_query_points) * sizeof(int)); // hnsw entry points
     // printf("cache points %d, degree: %d, offset: %d\n", num_of_cache_points, degree_of_cache_point, cache_offset_shift);
     int cache_search_width = 1;
     Timer search_cache_graph_time;
     search_cache_graph_time.Start();
     cagra_in_memory<<<num_of_query_points, 64, ((cache_search_width << cache_offset_shift) + num_of_cache_candidates) * sizeof(KernelPair<float, int>)>>>
     (d_cache_data, d_query, d_cache_result, d_cache_graph, num_of_cache_points, cache_offset_shift, num_of_cache_candidates, 
-    num_of_cache_candidates, num_of_cache_candidates, cache_search_width, d_cache_tags);
+    num_of_cache_results, num_of_cache_candidates, cache_search_width, d_cache_tags);
     CUDA_SYNC_CHECK();
     search_cache_graph_time.Stop();
     std::cout<<"Search cache graph time: "<<search_cache_graph_time.DurationInMilliseconds()<<" ms"<<std::endl;
@@ -807,10 +780,10 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     //                        d_query, ssd_data);
 
     //Hash
-    size_t hash_size = 100 * 1024 / sizeof(uint32_t);
+    size_t hash_size = 100 * 1024 / sizeof(uint32_t); // block visited, tested by recall
     uint32_t* d_hash_table;
-    cudaMalloc(&d_hash_table, hash_size * size_t(num_of_query_points) * sizeof(uint32_t));
-    cudaMemset(d_hash_table, 0, hash_size * size_t(num_of_query_points) * sizeof(uint32_t));
+    cudaMalloc(&d_hash_table, 2 * hash_size * size_t(num_of_query_points) * sizeof(uint32_t));
+    cudaMemset(d_hash_table, 0, 2 * hash_size * size_t(num_of_query_points) * sizeof(uint32_t));
     CUDA_SYNC_CHECK();
 
     Timer populate_chunk_distances_time;
@@ -843,44 +816,134 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     int num_of_points_to_sort = pow(2, ceil(log(num_elements_per_block) / log(2)));
     printf("final_num_of_candidates: %d\n", final_num_of_candidates);
 
-    constexpr int WARP_SIZE = 32;
-    constexpr int NumWarpQ = 32;
-    constexpr int NumThreadQ = 16;
-    length_of_block = pow(2, log(num_elements_per_block) / log(2));
+    // constexpr int WARP_SIZE = 32;
+    // constexpr int NumWarpQ = 32;
+    // constexpr int NumThreadQ = 16;
+    // length_of_block = pow(2, log(num_elements_per_block) / log(2));
+
+    Timer load_cluster;
+    // 初始化 Cluster 索引
+    load_cluster.Start();
+    load_cluster_indices();
+    load_cluster.Stop();
+    cout<< "load_cluster_indices: " << load_cluster.DurationInMilliseconds() <<" ms" << endl;
+
+    Timer load_data;
+    load_data.Start();
+    // 加载所有数据到 CPU 内存
+    load_all_data_to_cpu();
+    load_data.Stop();
+    cout<< "load_all_data_to_cpu: " << load_data.DurationInMilliseconds() <<" ms" << endl;
+
+    Timer create_info;
+    create_info.Start();
+    create_cluster_info();
+    create_info.Stop();
+    cout<< "create_info: " << create_info.DurationInMilliseconds() <<" ms" << endl;
+
+    Timer create_transfer_stream;
+    create_transfer_stream.Start();
+    // 创建 CUDA Stream
+    cudaStream_t transfer_stream;
+    CHECK_CUDA(cudaStreamCreate(&transfer_stream));
+    create_transfer_stream.Stop();
+    cout<< "create_transfer_stream: " << create_transfer_stream.DurationInMilliseconds() <<" ms" << endl;
+
+    Timer find_coarse_cluster;
+    find_coarse_cluster.Start();
+    // 获取访问最多的coarse cluster
+    std::vector<int> enter_cluster(num_of_query_points);
+    CHECK_CUDA(cudaMemcpy(enter_cluster.data(), d_enter_cluster, num_of_query_points * sizeof(int), cudaMemcpyDeviceToHost));
+    
+    // 统计粗聚类中心的访问次数
+    const int cluster_range = 100; // 每个 Cluster 的范围大小
+    const int num_clusters = 1000; // 总 Cluster 数量
+    std::vector<std::pair<int, int>> cluster_access_pairs(num_clusters);
+
+    // 初始化 cluster_access_pairs
+    for (int i = 0; i < num_clusters; i++) {
+        cluster_access_pairs[i] = {i, 0}; // 第一维是 Cluster ID，第二维是访问次数
+    }
+
+    // 遍历 enter_cluster，统计访问次数
+    for (int value : enter_cluster) {
+        cluster_access_pairs[value / cluster_range].second++; // 访问次数 +1
+    }
+
+    // 根据访问次数降序排序
+    std::sort(cluster_access_pairs.begin(), cluster_access_pairs.end(), 
+              [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+                  return b.second < a.second; // 降序排序
+              });
+
+    // 输出排序后的结果
+    std::cout << "Sorted Cluster Access Counts:" << std::endl;
+    int i = 0;
+    for (const auto& pair : cluster_access_pairs) {
+        if(i < 100) {
+            std::cout << "Cluster " << pair.first << " accessed " << pair.second << " times" << std::endl;
+            i++;
+        }
+        else break;
+    }
+    find_coarse_cluster.Stop();
+    cout<< "find_coarse_cluster: " << find_coarse_cluster.DurationInMilliseconds() <<" ms" << endl;
+
+    int transfer_counts = 0;
+    for (auto cluster : cluster_access_pairs) {
+        Timer transfer;
+        transfer.Start();
+        transfer_cluster(cluster.first, transfer_stream);
+        transfer.Stop();
+        cout << "transfer cluster " << cluster.first << " using " << transfer.DurationInMilliseconds() <<" ms" << endl;
+
+        transfer_counts++;
+        if(transfer_counts >= 100){
+            break;
+        }
+    }
+
+    const size_t dataSize = total_num_of_points * sizeof(int) * 2;
+
+    std::ifstream file("/data/szr/rvq_data_block/pointIdToClusterIdAndOffset.bin", std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file!" << std::endl;
+    }
+
+    std::vector<int> h_point2cluster(total_num_of_points * 2);
+    file.read(reinterpret_cast<char*>(h_point2cluster.data()), dataSize);
+    file.close();
+
+    int* d_point2cluster;
+    CHECK_CUDA(cudaMalloc(&d_point2cluster, dataSize));
+    CHECK_CUDA(cudaMemcpy(d_point2cluster, h_point2cluster.data(), dataSize, cudaMemcpyHostToDevice));
+
+    int* d_cluster_counts;
+    CHECK_CUDA(cudaMalloc(&d_cluster_counts, num_clusters * sizeof(int)));
+    CHECK_CUDA(cudaMemset(d_cluster_counts, 0, num_clusters * sizeof(int)));
+    
     graphSearch[2].Start();
-    // size_t query_batch = 5000;
-    // size_t iteration = (num_of_query_points + query_batch - 1) / query_batch;
-    // for(size_t l = 0; l < iteration; l++){
-    //     size_t tmp_query_batch = query_batch;
-    //     if(l == iteration - 1) tmp_query_batch = num_of_query_points - query_batch * l;
-    //     cagra_bam_pq_blocksearch<<<tmp_query_batch, 32, ((search_width << offset_shift) * length_of_block + num_of_candidates + final_num_of_candidates + num_of_points_to_sort) * sizeof(KernelPair<float, int>)>>>
-    //     (ssd_data->d_array_ptr, d_query, d_result, total_num_of_points, offset_shift, num_of_candidates, final_num_of_candidates, num_of_topk, num_of_points_to_sort, 
-    //     num_of_explored_points, search_width, d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block,
-    //     element_size / sizeof(int), length_of_block, d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_starling_resver_index,
-    //     d_cache_result, num_of_cache_candidates, d_num_of_block_accesses, query_batch * l);
-    // }
     cagra_bam_pq_blocksearch<<<num_of_query_points, 32, ((search_width << offset_shift) * length_of_block + num_of_candidates + final_num_of_candidates + num_of_points_to_sort) * sizeof(KernelPair<float, int>)>>>
     (ssd_data->d_array_ptr, d_query, d_result, total_num_of_points, offset_shift, num_of_candidates, final_num_of_candidates, num_of_topk, num_of_points_to_sort, 
     num_of_explored_points, search_width, d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block,
     element_size / sizeof(int), length_of_block, d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_starling_resver_index,
-    d_cache_result, num_of_cache_candidates, d_num_of_block_accesses, 0);
-
+    d_cache_result, num_of_cache_results, d_num_of_block_accesses, d_point2cluster, d_cluster_counts, d_cluster_info);
     // cagra_bam_pq_top1blocksearch<<<num_of_query_points, 32, ((search_width << offset_shift) + num_of_candidates + final_num_of_candidates + num_of_points_to_sort) * sizeof(KernelPair<float, int>)>>>
     // (ssd_data->d_array_ptr, d_query, d_result, total_num_of_points, offset_shift, num_of_candidates, final_num_of_candidates, num_of_topk, num_of_points_to_sort, 
     // num_of_explored_points, search_width, d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block,
     // element_size / sizeof(int), length_of_block, d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_starling_resver_index,
-    // d_cache_result, num_of_cache_candidates, d_num_of_block_accesses);
+    // d_cache_result, num_of_cache_results, d_num_of_block_accesses);
 
     // cagra_bam_pq_blocksearch_kselect<int, float, WARP_SIZE, NumWarpQ, NumThreadQ><<<num_of_query_points, 32, (final_num_of_candidates + num_of_points_to_sort) * sizeof(KernelPair<float, int>)>>>
     // (ssd_data->d_array_ptr, d_query, d_result, total_num_of_points, offset_shift, num_of_candidates, final_num_of_candidates, num_of_topk, num_of_points_to_sort, 
     // num_of_explored_points, search_width, d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block,
     // element_size / sizeof(int), length_of_block, d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_starling_resver_index,
-    // d_cache_result, num_of_cache_candidates, d_num_of_block_accesses);
+    // d_cache_result, num_of_cache_results, d_num_of_block_accesses);
 
     // cagra_bam_pq<<<num_of_query_points, 32, ((search_width << offset_shift) + num_of_candidates + final_num_of_candidates + num_of_points_to_sort) * sizeof(KernelPair<float, int>)>>>
     // (ssd_data->d_array_ptr, d_query, d_result, total_num_of_points, offset_shift, num_of_candidates, final_num_of_candidates, num_of_topk, num_of_points_to_sort,
     // num_of_explored_points, search_width, d_enter_cluster, d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block, 
-    // d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_cache_result, num_of_cache_candidates, d_num_of_block_accesses);
+    // d_time_breakdown, IO_count, d_dist_vec, d_pq_data, pq_index->num_of_chunks, d_starling_index, d_cache_result, num_of_cache_results, d_num_of_block_accesses);
     
     // cagra_bam<int, float, WARP_SIZE, NumWarpQ, NumThreadQ>
     // <<<num_of_query_points, 64,((search_width << offset_shift) + num_of_candidates) * sizeof(KernelPair<float, int>)>>>
@@ -888,7 +951,7 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     // d_rvq_index->indices, d_rvq_index->sizes, hash_size, d_hash_table, page_size, num_elements_per_block, d_time_breakdown, IO_count, d_starling_index);
     CUDA_SYNC_CHECK();
     graphSearch[2].Stop();
-     cout << "Search Time: " << graphSearch[2].DurationInMilliseconds() <<" ms" << endl;
+    cout << "Search Time: " << graphSearch[2].DurationInMilliseconds() <<" ms" << endl;
     graphSearch[2].duration += populate_chunk_distances_time.duration;
     // graphSearch[2].duration += populate_chunk_distances_time.duration + search_cache_graph_time.duration;
 
@@ -935,6 +998,20 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
         }
         // printf("\n");
     }
+
+    // 等待所有传输完成
+    CHECK_CUDA(cudaStreamSynchronize(transfer_stream));
+
+    // 清理资源
+    CHECK_CUDA(cudaStreamDestroy(transfer_stream));
+    std::cout << "Data transfer completed!" << std::endl;
+
+    std::vector<int> h_cluster_counts(num_clusters);
+    CHECK_CUDA(cudaMemcpy(h_cluster_counts.data(), d_cluster_counts, num_clusters * sizeof(int), cudaMemcpyDeviceToHost));
+
+    // for (int i = 0; i < num_clusters; ++i) {
+    //     std::cout << "Cluster " << i << " was accessed " << h_cluster_counts[i] << " times." << std::endl;
+    // }
 
     // cudaMemcpy(&h_count, d_count, sizeof(int) * num_of_query_points,
     // cudaMemcpyDeviceToHost); cudaMemcpy(&h_zero_count, d_zero_count,
@@ -998,7 +1075,7 @@ void NSWGraphOperations::Search(array_t<char> *ssd_data, float *d_data, float *d
     for(int i = 0; i < num_of_query_points; i++){
         avg_IO += h_IO_count[i];
     }
-    cout << "avgrage IO: " << double(avg_IO) / double(num_of_query_points) << endl;
+    cout << "average IO: " << double(avg_IO) / double(num_of_query_points) << endl;
     // cudaMemcpy(h_blockTimes, d_blockTimes, num_of_query_points * sizeof(unsigned long long),
     // cudaMemcpyDeviceToHost); unsigned long long max_clock = 0; int max_id;
     // unsigned long long avg_clock = 0;

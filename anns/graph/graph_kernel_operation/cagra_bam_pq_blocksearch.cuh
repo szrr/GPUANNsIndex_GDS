@@ -34,6 +34,7 @@
 #include<cuda_runtime.h>
 #include "./structure_on_device.cuh"
 #include "./cagra.cuh"
+#include "../graph_index/data_transfer.h"
 
 
 __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query, int* d_result, int total_num_of_points, int offset_shift, 
@@ -41,7 +42,7 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
                     int *d_enter_cluster, int** d_rvq_indices, int* d_rvq_indices_size, size_t hash_size, uint32_t* d_hash_table, size_t page_size, 
                     size_t num_elements_per_block, size_t size_of_element, int length_of_block, unsigned long long* time_breakdown, size_t* IO_count, float *d_dist_vec, 
                     uint8_t *d_pq_data, size_t num_of_chunks, int *d_starling_index, int *d_starling_resver_index, int *d_cache_result, int num_of_cache_candidates,
-                    int *num_of_block_accesses, size_t base_query_id){
+                    int *num_of_block_accesses, int *point2cluster, int *cluster_counts, ClusterData *cluster_info){
 
     // constexpr int WARP_SIZE = 32;
 	// constexpr int NumWarpQ = 32;
@@ -49,7 +50,7 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
     
     #define DIM 128
     int t_id = threadIdx.x;
-    size_t b_id = size_t(blockIdx.x) + base_query_id;
+    size_t b_id = size_t(blockIdx.x);
     int size_of_warp = 32;
     int size_of_block = blockDim.x;
     size_t lane_id = size_t(threadIdx.x) % size_t(size_of_warp);
@@ -73,14 +74,15 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
     }
 
     extern __shared__ KernelPair<float, int> shared_memory_space_s[];
-    KernelPair<float, int>* neighbors_array = shared_memory_space_s;
-    KernelPair<float, int>* final_neighbors_array = shared_memory_space_s + num_of_candidates + num_of_visited_points_one_batch;
+    KernelPair<float, int>* neighbors_array = shared_memory_space_s; // candidate list + neighbor PQ
+    KernelPair<float, int>* final_neighbors_array = shared_memory_space_s + num_of_candidates + num_of_visited_points_one_batch; // result list + precision distance array
     array_d_t<float>* vector_data = reinterpret_cast<array_d_t<float>*>(d_data);
     array_d_t<int>* neighbor_data = reinterpret_cast<array_d_t<int>*>(d_data);
 
     __shared__ uint32_t data[size32];
-    // __shared__ uint32_t block_data[tmp_size32];
+    // uint32_t* data = d_hash_table + gridDim.x * hash_size + b_id * hash_size;
     uint32_t* block_data = d_hash_table + b_id * hash_size;
+    uint32_t* point_data = d_hash_table + size_of_block * hash_size + b_id * hash_size;
     // uint32_t* data = d_hash_table + b_id * hash_size;
     // uint32_t random_number[10 * 2] = {
 	// 	0x924ed183U,0xd854fc0aU,0xecf5e3b7U,
@@ -281,9 +283,13 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
     
 //Search    
     //First iteration
+
+    //RVQ
     int cluster_id = d_enter_cluster[b_id];
     int enter_points_num = min(num_of_visited_points_one_batch, d_rvq_indices_size[cluster_id]);
     int* enter_points_pos = d_rvq_indices[cluster_id];
+    
+    // HNSW
     // int enter_points_num = min(num_of_cache_candidates, num_of_visited_points_one_batch);
     // int* enter_points_pos = d_cache_result + num_of_cache_candidates * b_id;
     int iteration;
@@ -315,7 +321,7 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
     
     __syncthreads();
     iteration = (enter_points_num + num_of_visited_points_one_batch -1) / num_of_visited_points_one_batch;
-    for(int iter = 0; iter < iteration; iter++){
+    for(int iter = 0; iter < iteration; iter++){ // calculate all entry points: bw * degree * 8
         auto compute_distance_start = clock64();
         for (int i = 0; i < (num_of_visited_points_one_batch + size_of_block - 1) / size_of_block; i++) {
             int unrollt_id = t_id + size_of_block * i;
@@ -323,9 +329,9 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
             if (unrollt_id < num_of_visited_points_one_batch && iter * num_of_visited_points_one_batch + unrollt_id < enter_points_num
                 /*&& !test(enter_points_pos[iter * num_of_visited_points_one_batch + unrollt_id], random_number, data)*/) { //enter_points_num
                 
-                neighbors_array[num_of_candidates + unrollt_id].second = enter_points_pos[iter * num_of_visited_points_one_batch + unrollt_id];
+                neighbors_array[num_of_candidates + unrollt_id].second = enter_points_pos[iter * num_of_visited_points_one_batch + unrollt_id]; // hnsw or rvq
                 
-                // neighbors_array[num_of_candidates + unrollt_id].second = iter * num_of_visited_points_one_batch + unrollt_id;
+                // neighbors_array[num_of_candidates + unrollt_id].second = iter * num_of_visited_points_one_batch + unrollt_id; // random
                 
                 add(neighbors_array[num_of_candidates + unrollt_id].second, random_number, data);
             }
@@ -335,8 +341,8 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
             }
         }
         __syncthreads();
-        
-        for (int i = warp_id; i < num_of_visited_points_one_batch; i += warp_size) {
+       
+        for (int i = 0; i < num_of_visited_points_one_batch; i++) { // PQ distance
             size_t target_point_id = size_t(neighbors_array[num_of_candidates + i].second);
             
             
@@ -365,16 +371,18 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
                 //     printf("Point: %lu, Dist: %f\n", target_point_id, dist);
                 // }
             }
+            
         }
         __syncthreads();
         auto compute_distance_end = clock64();
         if(t_id == 0){
             crt_time_breakdown[2] += compute_distance_end - compute_distance_start;
         }
+        
         step_id = 1;
         substep_id = 1;
         auto sort_start = clock64();
-        for (; step_id <= num_of_visited_points_one_batch / 2; step_id *= 2) {
+        for (; step_id <= num_of_visited_points_one_batch / 2; step_id *= 2) { // sort
             substep_id = step_id;
 
             for (; substep_id >= 1; substep_id /= 2) {
@@ -453,14 +461,14 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
     int first_position_of_flag;
     int check_zero = 0;
     int hash_iteration = 0;
-    // int num_of_read = 0;
+    int num_of_read = 0;
     iteration = 0;
     int iter = 0;
-    int max_iter = num_of_candidates;
+    int max_iter = num_of_candidates / search_width;
     while (flag_all_blocks /*&& iter < max_iter*/){
         iter++;
         if(t_id == 0){
-            IO_count[b_id]++;
+            IO_count[b_id]++; //steps
         }
         for(int i = 0 ; i < (num_of_visited_points_one_batch + size_of_block - 1) / size_of_block; i++){
             int unrollt_id = t_id + size_of_block * i;
@@ -471,222 +479,241 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
         }
         __syncthreads();
         tmp_search_width = 0;
-        while(tmp_search_width < search_width && tmp_flag != 0){
+        bool transferred;
+        while(tmp_search_width < search_width && tmp_flag != 0){ // select nearest unvisited point
             int first_position_of_tmp_flag = __ffs(tmp_flag) - 1;
             int neighbor_loc = iteration * size_of_warp + first_position_of_tmp_flag;
-            
-            first_position_of_flag = d_starling_index[abs(neighbors_array[neighbor_loc].second)];
-            tmp_flag &= ~(1 << first_position_of_tmp_flag);
-            size_t block_id = size_t(first_position_of_flag) / num_elements_per_block;
-            if(t_id == 0){
-                neighbors_array[neighbor_loc].second = -neighbors_array[neighbor_loc].second;
-                // atomicAdd(num_of_block_accesses + block_id, 1);
-            }
-            if(!tmp_test(int(block_id), random_number, block_data)){
-                size_t offset = block_id * page_size / sizeof(int);
-                first_position_of_flag = block_id * num_elements_per_block;
-                size_t num_of_points_in_block = min(size_t(num_elements_per_block), size_t(total_num_of_points) - num_elements_per_block * block_id);
-                
-                auto compute_precise_distance_start = clock64();
-                for(size_t i = 0; i < num_of_points_in_block; i++){
-                    //读取邻居
-                    // auto load_neighbors_start = clock64();
-                    // int tmp_degree_of_point = (*neighbor_data)[offset + i * size_of_element + DIM];
-                    // for (int l = 0; l < (tmp_degree_of_point + size_of_warp - 1) / size_of_warp; l++) {
-                    //     int unrollt_id = lane_id + size_of_warp * l;
-                    //     if (unrollt_id < tmp_degree_of_point) {
-                    //         int neighbor_loc = num_of_candidates + unrollt_id + tmp_search_width * degree_of_point * length_of_block + i * degree_of_point;
-                    //         int target_point = (*neighbor_data)[offset + i * size_of_element + DIM + size_t(unrollt_id + 1)];  
-                    //         if(!test(target_point, random_number, data)){
-                    //             neighbors_array[neighbor_loc].second = target_point; 
-                    //             add(target_point, random_number, data);
-                    //         }
-                    //     }
-                    // }
-                    // auto load_neighbors_end = clock64();
-                    // if(lane_id == 0){
-                    //     crt_time_breakdown[0] += load_neighbors_end - load_neighbors_start;
-                    // }
+            int point_id = abs(neighbors_array[neighbor_loc].second);
 
+            //判断是否已经传到GPU
+            int cluster = point2cluster[2*point_id];
+            transferred = cluster_info[cluster].is_transferred;
+
+            if(transferred) {
+                first_position_of_flag = d_starling_index[abs(neighbors_array[neighbor_loc].second)];
+                if(t_id == 0){
+                    neighbors_array[neighbor_loc].second = -neighbors_array[neighbor_loc].second;
+                    // IO_count[b_id]++;
+                    // size_t block_id = size_t(first_position_of_flag) / num_elements_per_block;
+                    // atomicAdd(num_of_block_accesses + block_id, 1);
+                }
+                tmp_flag &= ~(1 << first_position_of_tmp_flag);
+
+                // size_t offset = (size_t(first_position_of_flag) / num_elements_per_block) * page_size / sizeof(int) + 
+                //                 (size_t(first_position_of_flag) % num_elements_per_block) * (DIM + size_t(degree_of_point + 1));
+                char* cluster_data = reinterpret_cast<char*>(cluster_info[cluster].gpu_ptr);
+                int* cluster_neighbor_data = reinterpret_cast<int*>(cluster_info[cluster].gpu_ptr);
+                float* cluster_vector_data = reinterpret_cast<float*>(cluster_info[cluster].gpu_ptr);
+
+                size_t offset = size_t(point2cluster[2*point_id+1]) * (DIM + size_t(degree_of_point + 1));
+                if(!tmp_test(first_position_of_flag, random_number, block_data)){
+                    auto load_neighbors_start = clock64();
+                    //读取邻居
+                    int tmp_degree_of_point = cluster_neighbor_data[offset + DIM];
+                    for (int i = 0; i < (degree_of_point + size_of_warp - 1) / size_of_warp; i++) {
+                        int unrollt_id = lane_id + size_of_warp * i;
+                        if (unrollt_id < degree_of_point) {
+                            int neighbor_loc = num_of_candidates + unrollt_id + tmp_search_width * degree_of_point;
+                            if(unrollt_id >= tmp_degree_of_point){
+                                neighbors_array[neighbor_loc].second = total_num_of_points;
+                            }else{
+                                int target_point = cluster_neighbor_data[offset + DIM + size_t(unrollt_id + 1)]; 
+                                // int target_point = d_starling_index[(*neighbor_data)[offset + DIM + size_t(unrollt_id + 1)]]; 
+                                if(test(target_point, random_number, data)){
+                                    neighbors_array[neighbor_loc].second = total_num_of_points;
+                                }else{
+                                    neighbors_array[neighbor_loc].second = target_point; 
+                                    add(target_point, random_number, data);
+                                }
+                            }
+                            
+                        }
+                    }
+                    auto load_neighbors_end = clock64();
+                    if(lane_id == 0){
+                        crt_time_breakdown[0] += load_neighbors_end - load_neighbors_start;
+                    }
+                
+                    auto compute_precise_distance_start = clock64();
                     //计算精确距离
                     #if DIM > 0
                         float p1 = 0;
                         if (lane_id < DIM) {
-                            p1 = (*vector_data)[offset + i * size_of_element + lane_id];
+                            p1 = cluster_vector_data[offset + lane_id];
                         }
                     #endif
                     #if DIM > 32
                         float p2 = 0;
                         if (lane_id + 32 < DIM) {
-                            p2 = (*vector_data)[offset + i * size_of_element + lane_id + 32];
+                            p2 = cluster_vector_data[offset + lane_id + size_t(32)];
                         }
                     #endif
                     #if DIM > 64
                         float p3 = 0;
                         if (lane_id + 64 < DIM) {
-                            p3 = (*vector_data)[offset + i * size_of_element + lane_id + 64];
+                            p3 = cluster_vector_data[offset + lane_id + size_t(64)];
                         }
                     #endif
                     #if DIM > 96
                         float p4 = 0;
                         if (lane_id + 96 < DIM) {
-                            p4 = (*vector_data)[offset + i * size_of_element + lane_id + 96];
+                            p4 = cluster_vector_data[offset + lane_id + 96];
                         }
                     #endif
                     #if DIM > 128
                         float p5 = 0;
                         if (lane_id + 128 < DIM) {
-                            p5 = float((*d_data)[target_point_id * DIM + lane_id + 128]);
+                            p5 = float(cluster_data[target_point_id * DIM + lane_id + 128]);
                         }
                     #endif
                     #if DIM > 160
                         float p6 = 0;
                         if (lane_id + 160 < DIM) {
-                            p6 = float((*d_data)[target_point_id * DIM + lane_id + 160]);
+                            p6 = float(cluster_data[target_point_id * DIM + lane_id + 160]);
                         }
                     #endif
                     #if DIM > 192
                         float p7 = 0;
                         if (lane_id + 192 < DIM) {
-                            p7 = float((*d_data)[target_point_id * DIM + lane_id + 192]);
+                            p7 = float(cluster_data[target_point_id * DIM + lane_id + 192]);
                         }
                     #endif
                     #if DIM > 224
                         float p8 = 0;
                         if (lane_id + 224 < DIM) {
-                            p8 = float((*d_data)[target_point_id * DIM + lane_id + 224]);
+                            p8 = float(cluster_data[target_point_id * DIM + lane_id + 224]);
                         }
                     #endif
                     #if DIM > 256
                         float p9 = 0;
                         if (lane_id + 256 < DIM) {
-                            p9 = float((*d_data)[target_point_id * DIM + lane_id + 256]);
+                            p9 = float(cluster_data[target_point_id * DIM + lane_id + 256]);
                         }
                     #endif
                     #if DIM > 288
                         float p10 = 0;
                         if (lane_id + 288 < DIM) {
-                            p10 = float((*d_data)[target_point_id * DIM + lane_id + 288]);
+                            p10 = float(cluster_data[target_point_id * DIM + lane_id + 288]);
                         }
                     #endif
                     #if DIM > 320
                         float p11 = 0;
                         if (lane_id + 320 < DIM) {
-                            p11 = float((*d_data)[target_point_id * DIM + lane_id + 320]);
+                            p11 = float(cluster_data[target_point_id * DIM + lane_id + 320]);
                         }
                     #endif
                     #if DIM > 352
                         float p12 = 0;
                         if (lane_id + 352 < DIM) {
-                            p12 = float((*d_data)[target_point_id * DIM + lane_id + 352]);
+                            p12 = float(cluster_data[target_point_id * DIM + lane_id + 352]);
                         }
                     #endif
                     #if DIM > 384
                         float p13 = 0;
                         if (lane_id + 384 < DIM) {
-                            p13 = float((*d_data)[target_point_id * DIM + lane_id + 384]);
+                            p13 = float(cluster_data[target_point_id * DIM + lane_id + 384]);
                         }
                     #endif
                     #if DIM > 416
                         float p14 = 0;
                         if (lane_id + 416 < DIM) {
-                            p14 = float((*d_data)[target_point_id * DIM + lane_id + 416]);
+                            p14 = float(cluster_data[target_point_id * DIM + lane_id + 416]);
                         }
                     #endif
                     #if DIM > 448
                         float p15 = 0;
                         if (lane_id + 448 < DIM) {
-                            p15 = float((*d_data)[target_point_id * DIM + lane_id + 448]);
+                            p15 = float(cluster_data[target_point_id * DIM + lane_id + 448]);
                         }
                     #endif
                     #if DIM > 480
                         float p16 = 0;
                         if (lane_id + 480 < DIM) {
-                            p16 = float((*d_data)[target_point_id * DIM + lane_id + 480]);
+                            p16 = float(cluster_data[target_point_id * DIM + lane_id + 480]);
                         }
                     #endif
                     #if DIM > 512
                         float p17 = 0;
                         if (lane_id + 512 < DIM) {
-                            p17 = float((*d_data)[target_point_id * DIM + lane_id + 512]);
+                            p17 = float(cluster_data[target_point_id * DIM + lane_id + 512]);
                         }
                     #endif
                     #if DIM > 544
                         float p18 = 0;
                         if (lane_id + 544 < DIM) {
-                            p18 = float((*d_data)[target_point_id * DIM + lane_id + 544]);
+                            p18 = float(cluster_data[target_point_id * DIM + lane_id + 544]);
                         }
                     #endif
                     #if DIM > 576
                         float p19 = 0;
                         if (lane_id + 576 < DIM) {
-                            p19 = float((*d_data)[target_point_id * DIM + lane_id + 576]);
+                            p19 = float(cluster_data[target_point_id * DIM + lane_id + 576]);
                         }
                     #endif
                     #if DIM > 608
                         float p20 = 0;
                         if (lane_id + 608 < DIM) {
-                            p20 = float((*d_data)[target_point_id * DIM + lane_id + 608]);
+                            p20 = float(cluster_data[target_point_id * DIM + lane_id + 608]);
                         }
                     #endif
                     #if DIM > 640
                         float p21 = 0;
                         if (lane_id + 640 < DIM) {
-                            p21 = float((*d_data)[target_point_id * DIM + lane_id + 640]);
+                            p21 = float(cluster_data[target_point_id * DIM + lane_id + 640]);
                         }
                     #endif
                     #if DIM > 672
                         float p22 = 0;
                         if (lane_id + 672 < DIM) {
-                            p22 = float((*d_data)[target_point_id * DIM + lane_id + 672]);
+                            p22 = float(cluster_data[target_point_id * DIM + lane_id + 672]);
                         }
                     #endif
                     #if DIM > 704
                         float p23 = 0;
                         if (lane_id + 704 < DIM) {
-                            p23 = float((*d_data)[target_point_id * DIM + lane_id + 704]);
+                            p23 = float(cluster_data[target_point_id * DIM + lane_id + 704]);
                         }
                     #endif
                     #if DIM > 736
                         float p24 = 0;
                         if (lane_id + 736 < DIM) {
-                            p24 = float((*d_data)[target_point_id * DIM + lane_id + 736]);
+                            p24 = float(cluster_data[target_point_id * DIM + lane_id + 736]);
                         }
                     #endif
                     #if DIM > 768
                         float p25 = 0;
                         if (lane_id + 768 < DIM) {
-                            p25 = float((*d_data)[target_point_id * DIM + lane_id + 768]);
+                            p25 = float(cluster_data[target_point_id * DIM + lane_id + 768]);
                         }
                     #endif
                     #if DIM > 800
                         float p26 = 0;
                         if (lane_id + 800 < DIM) {
-                            p26 = float((*d_data)[target_point_id * DIM + lane_id + 800]);
+                            p26 = float(cluster_data[target_point_id * DIM + lane_id + 800]);
                         }
                     #endif
                     #if DIM > 832
                         float p27 = 0;
                         if (lane_id + 832 < DIM) {
-                            p27 = float((*d_data)[target_point_id * DIM + lane_id + 832]);
+                            p27 = float(cluster_data[target_point_id * DIM + lane_id + 832]);
                         }
                     #endif
                     #if DIM > 864
                         float p28 = 0;
                         if (lane_id + 864 < DIM) {
-                            p28 = float((*d_data)[target_point_id * DIM + lane_id + 864]);
+                            p28 = float(cluster_data[target_point_id * DIM + lane_id + 864]);
                         }
                     #endif
                     #if DIM > 896
                         float p29 = 0;
                         if (lane_id + 896 < DIM) {
-                            p29 = float((*d_data)[target_point_id * DIM + lane_id + 896]);
+                            p29 = float(cluster_data[target_point_id * DIM + lane_id + 896]);
                         }
                     #endif
                     #if DIM > 928
                         float p30 = 0;
                         if (lane_id + 224 < DIM) {
-                            p30 = float((*d_data)[target_point_id * DIM + lane_id + 928]);
+                            p30 = float(cluster_data[target_point_id * DIM + lane_id + 928]);
                         }
                     #endif
 
@@ -888,173 +915,712 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
                     #endif
 
                     if (lane_id == 0) {
-                        final_neighbors_array[final_num_of_candidates + i].first = dist; 
-                        final_neighbors_array[final_num_of_candidates + i].second = first_position_of_flag + i;
+                        final_neighbors_array[final_num_of_candidates + num_of_read].first = dist; 
+                        final_neighbors_array[final_num_of_candidates + num_of_read].second = first_position_of_flag;
+                        tmp_add(first_position_of_flag, random_number, block_data);
                         // if(b_id == 0){
                         //     printf("Point : %d, Dist: %f\n", first_position_of_flag, dist);
                         // }
                     }
-                    // num_of_read++;
-                    // __syncthreads();
-                }
-                auto compute_precise_distance_end = clock64();
-                if(lane_id == 0){
-                    crt_time_breakdown[1] += compute_precise_distance_end - compute_precise_distance_start;
-                }
-                //对结果排序取前length_of_block个计算邻居
-                auto sort_start = clock64();
-                step_id = 1;
-                substep_id = 1;
-                for (; step_id <= final_num_of_visited_points_one_batch / 2; step_id *= 2) {
-                    substep_id = step_id;
+                    auto compute_precise_distance_end = clock64();
+                    if(lane_id == 0){
+                        crt_time_breakdown[1] += compute_precise_distance_end - compute_precise_distance_start;
+                    }
+                    num_of_read++;
+                    __syncthreads();
+                    if(num_of_read == num_of_points_to_sort){
+                        auto sort_start = clock64();
+                        step_id = 1;
+                        substep_id = 1;
+                        for (; step_id <= final_num_of_visited_points_one_batch / 2; step_id *= 2) {
+                            substep_id = step_id;
 
-                    for (; substep_id >= 1; substep_id /= 2) {
-                        for (int temparory_id = 0; temparory_id < (final_num_of_visited_points_one_batch / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
-                            int unrollt_id = final_num_of_candidates + ((t_id + size_of_block * temparory_id) / substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
-                            
-                            if (unrollt_id < final_num_of_candidates + final_num_of_visited_points_one_batch) {
-                                if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
-                                    if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
-                                        temporary_neighbor = final_neighbors_array[unrollt_id];
-                                        final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-                                        final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-                                    }
-                                } else {
-                                    if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
-                                        temporary_neighbor = final_neighbors_array[unrollt_id];
-                                        final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-                                        final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                            for (; substep_id >= 1; substep_id /= 2) {
+                                for (int temparory_id = 0; temparory_id < (final_num_of_visited_points_one_batch / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                                    int unrollt_id = final_num_of_candidates + ((t_id + size_of_block * temparory_id) / substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+                                    
+                                    if (unrollt_id < final_num_of_candidates + final_num_of_visited_points_one_batch) {
+                                        if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                                            if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                            }
+                                        } else {
+                                            if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            __syncthreads();
+                        }
+                        __syncthreads();
+                        //将候选列表与邻居列表merge之后排序
+                        
+                        for (int temparory_id = 0; temparory_id < (final_length_of_compared_list + size_of_block - 1) / size_of_block; temparory_id++) {
+                            int unrollt_id = final_num_of_candidates - final_length_of_compared_list + t_id + size_of_block * temparory_id;
+                            if (unrollt_id < final_num_of_candidates) {
+                                if(final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first == MAX) continue;
+                                if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first) {
+                                    temporary_neighbor = final_neighbors_array[unrollt_id];
+                                    final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch];
+                                    final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch] = temporary_neighbor;
+                                }
+                            }
+                        }
+                        __syncthreads();
+                        step_id = final_num_of_candidates / 2;
+                        substep_id = final_num_of_candidates / 2;
+                        for (; substep_id >= 1; substep_id /= 2) {
+                            for (int temparory_id = 0; temparory_id < (final_num_of_candidates / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                                int unrollt_id = ((t_id + size_of_block * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+                                if (unrollt_id < final_num_of_candidates) {
+                                    if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                                        if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                        }
+                                    } else {
+                                        if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                        }
+                                    }
+                                }
+                            }
+                            __syncthreads();
+                        }
+                        __syncthreads();
+                        for (int i = 0; i < (final_num_of_visited_points_one_batch + size_of_block - 1) / size_of_block; i++) {
+                            int unrollt_id = t_id + size_of_block * i;
+
+                            if (unrollt_id < final_num_of_visited_points_one_batch) {
+
+                                final_neighbors_array[final_num_of_candidates + unrollt_id].first = MAX;
+                                final_neighbors_array[final_num_of_candidates + unrollt_id].second = total_num_of_points;
+                            }
+                        }
+                        // if(b_id == 0 && t_id == 0){
+                        //     for(int i = 0; i < final_num_of_candidates; i++){
+                        //         printf("Points: %d, Dist: %f\n", final_neighbors_array[i].second, final_neighbors_array[i].first);
+                        //     }
+                        //     printf("\n");
+                        // }
+                        num_of_read = 0;
+                        __syncthreads();
+                        auto sort_end = clock64();
+                        if(lane_id == 0){
+                            crt_time_breakdown[3] += sort_end - sort_start;
                         }
                     }
-                    __syncthreads();
+
+                    
+                    tmp_search_width++;
                 }
-                __syncthreads();
+
+                if(tmp_search_width == search_width) break;
+                auto sort_start = clock64();
+                while(tmp_flag == 0 && iteration < (num_of_explored_points + size_of_warp - 1) / size_of_warp){
+                    iteration++;
+                    int unrollt_id = lane_id + size_of_warp * iteration;
+                    crt_flag = 0;
+                    if(unrollt_id < num_of_explored_points){
+                        if(neighbors_array[unrollt_id].second > 0 && neighbors_array[unrollt_id].second < total_num_of_points){
+                            crt_flag = 1;
+                        }else if(neighbors_array[unrollt_id].second == 0){
+                            if(check_zero == 0){
+                                check_zero = 1;
+                                crt_flag = 1;
+                            }
+                        }
+                    }
+                    tmp_flag = __ballot_sync(FULL_MASK, crt_flag);
+                }
                 auto sort_end = clock64();
                 if(lane_id == 0){
                     crt_time_breakdown[3] += sort_end - sort_start;
                 }
-                //取邻居
-                auto load_neighbors_start = clock64();
-                for(size_t i = 0; i < length_of_block; i++){
-                    int target_point_id = final_neighbors_array[final_num_of_candidates + final_num_of_visited_points_one_batch - 1 - i].second;
-                    int tmp_degree_of_point = (*neighbor_data)[offset + (size_t(target_point_id) - block_id * num_elements_per_block) * size_of_element + DIM];
-                    for (int l = 0; l < (tmp_degree_of_point + size_of_warp - 1) / size_of_warp; l++) {
-                        int unrollt_id = lane_id + size_of_warp * l;
-                        if (unrollt_id < tmp_degree_of_point) {
-                            int neighbor_loc = num_of_candidates + unrollt_id + tmp_search_width * degree_of_point * length_of_block + i * degree_of_point;
-                            int target_point = (*neighbor_data)[offset + i * size_of_element + DIM + size_t(unrollt_id + 1)];  
-                            if(!test(target_point, random_number, data)){
-                                neighbors_array[neighbor_loc].second = target_point; 
-                                add(target_point, random_number, data);
-                            }
-                        }
-                    }
-                }
-                auto load_neighbors_end = clock64();
+            } 
+            else {
+                first_position_of_flag = d_starling_index[point_id];
+
+                // if(lane_id == 0){
+                //     atomicAdd(&cluster_counts[point2cluster[2*abs(neighbors_array[neighbor_loc].second)]], 1);
+                // }
+
+                tmp_flag &= ~(1 << first_position_of_tmp_flag);
+                size_t block_id = size_t(first_position_of_flag) / num_elements_per_block;
                 if(lane_id == 0){
-                    crt_time_breakdown[0] += load_neighbors_end - load_neighbors_start;
+                    neighbors_array[neighbor_loc].second = -neighbors_array[neighbor_loc].second; // visited node, idx排除
+                    // atomicAdd(num_of_block_accesses + block_id, 1);
                 }
-                //将结果候选列表与计算精确距离列表merge之后排序
-                sort_start = clock64();
-                for (int temparory_id = 0; temparory_id < (final_length_of_compared_list + size_of_block - 1) / size_of_block; temparory_id++) {
-                    int unrollt_id = final_num_of_candidates - final_length_of_compared_list + t_id + size_of_block * temparory_id;
-                    if (unrollt_id < final_num_of_candidates) {
-                        if(final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first == MAX) continue;
-                        if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first) {
-                            temporary_neighbor = final_neighbors_array[unrollt_id];
-                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch];
-                            final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch] = temporary_neighbor;
-                        }
-                    }
-                }
-                __syncthreads();
-                step_id = final_num_of_candidates / 2;
-                substep_id = final_num_of_candidates / 2;
-                for (; substep_id >= 1; substep_id /= 2) {
-                    for (int temparory_id = 0; temparory_id < (final_num_of_candidates / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
-                        int unrollt_id = ((t_id + size_of_block * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
-                        if (unrollt_id < final_num_of_candidates) {
-                            if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
-                                if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
-                                    temporary_neighbor = final_neighbors_array[unrollt_id];
-                                    final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-                                    final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-                                }
-                            } else {
-                                if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
-                                    temporary_neighbor = final_neighbors_array[unrollt_id];
-                                    final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-                                    final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                if(!tmp_test(first_position_of_flag, random_number, block_data)){
+                    size_t offset = block_id * page_size / sizeof(int);
+                    first_position_of_flag = block_id * num_elements_per_block;
+                    size_t num_of_points_in_block = min(num_elements_per_block, size_t(total_num_of_points) - num_elements_per_block * block_id);
+                    
+                    if(num_of_read + num_of_points_in_block >= num_of_points_to_sort){ //排序结果邻居列表，长度 按2次幂向上取整（topk） + 64
+                        auto sort_start = clock64();
+                        step_id = 1;
+                        substep_id = 1;
+                        for (; step_id <= final_num_of_visited_points_one_batch / 2; step_id *= 2) {
+                            substep_id = step_id;
+
+                            for (; substep_id >= 1; substep_id /= 2) {
+                                for (int temparory_id = 0; temparory_id < (final_num_of_visited_points_one_batch / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                                    int unrollt_id = final_num_of_candidates + ((t_id + size_of_block * temparory_id) / substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+                                    
+                                    if (unrollt_id < final_num_of_candidates + final_num_of_visited_points_one_batch) {
+                                        if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                                            if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                            }
+                                        } else {
+                                            if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            __syncthreads();
+                        }
+                        __syncthreads();
+                        //将候选列表与邻居列表merge之后排序
+                        
+                        for (int temparory_id = 0; temparory_id < (final_length_of_compared_list + size_of_block - 1) / size_of_block; temparory_id++) {
+                            int unrollt_id = final_num_of_candidates - final_length_of_compared_list + t_id + size_of_block * temparory_id;
+                            if (unrollt_id < final_num_of_candidates) {
+                                if(final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first == MAX) continue;
+                                if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first) {
+                                    temporary_neighbor = final_neighbors_array[unrollt_id];
+                                    final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch];
+                                    final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch] = temporary_neighbor;
+                                }
+                            }
+                        }
+                        __syncthreads();
+                        step_id = final_num_of_candidates / 2;
+                        substep_id = final_num_of_candidates / 2;
+                        for (; substep_id >= 1; substep_id /= 2) {
+                            for (int temparory_id = 0; temparory_id < (final_num_of_candidates / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                                int unrollt_id = ((t_id + size_of_block * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+                                if (unrollt_id < final_num_of_candidates) {
+                                    if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                                        if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                        }
+                                    } else {
+                                        if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                                        }
+                                    }
+                                }
+                            }
+                            __syncthreads();
+                        }
+                        __syncthreads();
+                        for (int i = 0; i < (final_num_of_visited_points_one_batch + size_of_block - 1) / size_of_block; i++) {
+                            int unrollt_id = t_id + size_of_block * i;
+
+                            if (unrollt_id < final_num_of_visited_points_one_batch) {
+
+                                final_neighbors_array[final_num_of_candidates + unrollt_id].first = MAX;
+                                final_neighbors_array[final_num_of_candidates + unrollt_id].second = total_num_of_points;
+                            }
+                        }
+                        // if(b_id == 0 && t_id == 0){
+                        //     for(int i = 0; i < final_num_of_candidates; i++){
+                        //         printf("Points: %d, Dist: %f\n", final_neighbors_array[i].second, final_neighbors_array[i].first);
+                        //     }
+                        //     printf("\n");
+                        // }
+                        num_of_read = 0;
+                        __syncthreads();
+                        auto sort_end = clock64();
+                        if(t_id == 0){
+                            crt_time_breakdown[3] += sort_end - sort_start;
                         }
                     }
                     __syncthreads();
-                }
-                __syncthreads();
-                for (int i = 0; i < (final_num_of_visited_points_one_batch + size_of_block - 1) / size_of_block; i++) {
-                    int unrollt_id = t_id + size_of_block * i;
+                    for(size_t i = 0; i < num_of_points_in_block; i++){ // 一直是32threads，1warp
+                        //读取邻居
+                        if(tmp_test(int(first_position_of_flag + i), random_number, block_data)) continue;
+                        auto load_neighbors_start = clock64();
+                        int tmp_degree_of_point = (*neighbor_data)[offset + i * size_of_element + DIM];
+                        for (int l = 0; l < (tmp_degree_of_point + size_of_warp - 1) / size_of_warp; l++) {
+                            int unrollt_id = lane_id + size_of_warp * l;
+                            if (unrollt_id < tmp_degree_of_point) {
+                                int neighbor_loc = num_of_candidates + unrollt_id + tmp_search_width * degree_of_point * length_of_block + i * degree_of_point;
+                                int target_point = (*neighbor_data)[offset + i * size_of_element + DIM + size_t(unrollt_id + 1)];  
+                                if(!test(target_point, random_number, data)){
+                                    neighbors_array[neighbor_loc].second = target_point; 
+                                    add(target_point, random_number, data);
+                                }
+                            }
+                        }
+                        __syncthreads();
+                        auto load_neighbors_end = clock64();
+                        if(lane_id == 0){
+                            crt_time_breakdown[0] += load_neighbors_end - load_neighbors_start;
+                        }
+                        
+                        //计算精确距离
+                        auto compute_precise_distance_start = clock64();
+                        #if DIM > 0
+                            float p1 = 0;
+                            if (lane_id < DIM) {
+                                p1 = (*vector_data)[offset + i * size_of_element + lane_id];
+                            }
+                        #endif
+                        #if DIM > 32
+                            float p2 = 0;
+                            if (lane_id + 32 < DIM) {
+                                p2 = (*vector_data)[offset + i * size_of_element + lane_id + 32];
+                            }
+                        #endif
+                        #if DIM > 64
+                            float p3 = 0;
+                            if (lane_id + 64 < DIM) {
+                                p3 = (*vector_data)[offset + i * size_of_element + lane_id + 64];
+                            }
+                        #endif
+                        #if DIM > 96
+                            float p4 = 0;
+                            if (lane_id + 96 < DIM) {
+                                p4 = (*vector_data)[offset + i * size_of_element + lane_id + 96];
+                            }
+                        #endif
+                        #if DIM > 128
+                            float p5 = 0;
+                            if (lane_id + 128 < DIM) {
+                                p5 = float((*d_data)[target_point_id * DIM + lane_id + 128]);
+                            }
+                        #endif
+                        #if DIM > 160
+                            float p6 = 0;
+                            if (lane_id + 160 < DIM) {
+                                p6 = float((*d_data)[target_point_id * DIM + lane_id + 160]);
+                            }
+                        #endif
+                        #if DIM > 192
+                            float p7 = 0;
+                            if (lane_id + 192 < DIM) {
+                                p7 = float((*d_data)[target_point_id * DIM + lane_id + 192]);
+                            }
+                        #endif
+                        #if DIM > 224
+                            float p8 = 0;
+                            if (lane_id + 224 < DIM) {
+                                p8 = float((*d_data)[target_point_id * DIM + lane_id + 224]);
+                            }
+                        #endif
+                        #if DIM > 256
+                            float p9 = 0;
+                            if (lane_id + 256 < DIM) {
+                                p9 = float((*d_data)[target_point_id * DIM + lane_id + 256]);
+                            }
+                        #endif
+                        #if DIM > 288
+                            float p10 = 0;
+                            if (lane_id + 288 < DIM) {
+                                p10 = float((*d_data)[target_point_id * DIM + lane_id + 288]);
+                            }
+                        #endif
+                        #if DIM > 320
+                            float p11 = 0;
+                            if (lane_id + 320 < DIM) {
+                                p11 = float((*d_data)[target_point_id * DIM + lane_id + 320]);
+                            }
+                        #endif
+                        #if DIM > 352
+                            float p12 = 0;
+                            if (lane_id + 352 < DIM) {
+                                p12 = float((*d_data)[target_point_id * DIM + lane_id + 352]);
+                            }
+                        #endif
+                        #if DIM > 384
+                            float p13 = 0;
+                            if (lane_id + 384 < DIM) {
+                                p13 = float((*d_data)[target_point_id * DIM + lane_id + 384]);
+                            }
+                        #endif
+                        #if DIM > 416
+                            float p14 = 0;
+                            if (lane_id + 416 < DIM) {
+                                p14 = float((*d_data)[target_point_id * DIM + lane_id + 416]);
+                            }
+                        #endif
+                        #if DIM > 448
+                            float p15 = 0;
+                            if (lane_id + 448 < DIM) {
+                                p15 = float((*d_data)[target_point_id * DIM + lane_id + 448]);
+                            }
+                        #endif
+                        #if DIM > 480
+                            float p16 = 0;
+                            if (lane_id + 480 < DIM) {
+                                p16 = float((*d_data)[target_point_id * DIM + lane_id + 480]);
+                            }
+                        #endif
+                        #if DIM > 512
+                            float p17 = 0;
+                            if (lane_id + 512 < DIM) {
+                                p17 = float((*d_data)[target_point_id * DIM + lane_id + 512]);
+                            }
+                        #endif
+                        #if DIM > 544
+                            float p18 = 0;
+                            if (lane_id + 544 < DIM) {
+                                p18 = float((*d_data)[target_point_id * DIM + lane_id + 544]);
+                            }
+                        #endif
+                        #if DIM > 576
+                            float p19 = 0;
+                            if (lane_id + 576 < DIM) {
+                                p19 = float((*d_data)[target_point_id * DIM + lane_id + 576]);
+                            }
+                        #endif
+                        #if DIM > 608
+                            float p20 = 0;
+                            if (lane_id + 608 < DIM) {
+                                p20 = float((*d_data)[target_point_id * DIM + lane_id + 608]);
+                            }
+                        #endif
+                        #if DIM > 640
+                            float p21 = 0;
+                            if (lane_id + 640 < DIM) {
+                                p21 = float((*d_data)[target_point_id * DIM + lane_id + 640]);
+                            }
+                        #endif
+                        #if DIM > 672
+                            float p22 = 0;
+                            if (lane_id + 672 < DIM) {
+                                p22 = float((*d_data)[target_point_id * DIM + lane_id + 672]);
+                            }
+                        #endif
+                        #if DIM > 704
+                            float p23 = 0;
+                            if (lane_id + 704 < DIM) {
+                                p23 = float((*d_data)[target_point_id * DIM + lane_id + 704]);
+                            }
+                        #endif
+                        #if DIM > 736
+                            float p24 = 0;
+                            if (lane_id + 736 < DIM) {
+                                p24 = float((*d_data)[target_point_id * DIM + lane_id + 736]);
+                            }
+                        #endif
+                        #if DIM > 768
+                            float p25 = 0;
+                            if (lane_id + 768 < DIM) {
+                                p25 = float((*d_data)[target_point_id * DIM + lane_id + 768]);
+                            }
+                        #endif
+                        #if DIM > 800
+                            float p26 = 0;
+                            if (lane_id + 800 < DIM) {
+                                p26 = float((*d_data)[target_point_id * DIM + lane_id + 800]);
+                            }
+                        #endif
+                        #if DIM > 832
+                            float p27 = 0;
+                            if (lane_id + 832 < DIM) {
+                                p27 = float((*d_data)[target_point_id * DIM + lane_id + 832]);
+                            }
+                        #endif
+                        #if DIM > 864
+                            float p28 = 0;
+                            if (lane_id + 864 < DIM) {
+                                p28 = float((*d_data)[target_point_id * DIM + lane_id + 864]);
+                            }
+                        #endif
+                        #if DIM > 896
+                            float p29 = 0;
+                            if (lane_id + 896 < DIM) {
+                                p29 = float((*d_data)[target_point_id * DIM + lane_id + 896]);
+                            }
+                        #endif
+                        #if DIM > 928
+                            float p30 = 0;
+                            if (lane_id + 224 < DIM) {
+                                p30 = float((*d_data)[target_point_id * DIM + lane_id + 928]);
+                            }
+                        #endif
 
-                    if (unrollt_id < final_num_of_visited_points_one_batch) {
+                        #if USE_L2_DIST_
+                        #if DIM > 0
+                            float delta1 = (p1 - q1) * (p1 - q1);
+                        #endif
+                        #if DIM > 32
+                            float delta2 = (p2 - q2) * (p2 - q2);
+                        #endif
+                        #if DIM > 64
+                            float delta3 = (p3 - q3) * (p3 - q3);
+                        #endif
+                        #if DIM > 96
+                            float delta4 = (p4 - q4) * (p4 - q4);
+                        #endif
+                        #if DIM > 128
+                            float delta5 = (p5 - q5) * (p5 - q5);
+                        #endif
+                        #if DIM > 160
+                            float delta6 = (p6 - q6) * (p6 - q6);
+                        #endif
+                        #if DIM > 192
+                            float delta7 = (p7 - q7) * (p7 - q7);
+                        #endif
+                        #if DIM > 224
+                            float delta8 = (p8 - q8) * (p8 - q8);
+                        #endif
+                        #if DIM > 256
+                            float delta9 = (p9 - q9) * (p9 - q9);
+                        #endif
+                        #if DIM > 288
+                            float delta10 = (p10 - q10) * (p10 - q10);
+                        #endif
+                        #if DIM > 320
+                            float delta11 = (p11 - q11) * (p11 - q11);
+                        #endif
+                        #if DIM > 352
+                            float delta12 = (p12 - q12) * (p12 - q12);
+                        #endif
+                        #if DIM > 384
+                            float delta13 = (p13 - q13) * (p13 - q13);
+                        #endif
+                        #if DIM > 416
+                            float delta14 = (p14 - q14) * (p14 - q14);
+                        #endif
+                        #if DIM > 448
+                            float delta15 = (p15 - q15) * (p15 - q15);
+                        #endif
+                        #if DIM > 480
+                            float delta16 = (p16 - q16) * (p16 - q16);
+                        #endif
+                        #if DIM > 512
+                            float delta17 = (p17 - q17) * (p17 - q17);
+                        #endif
+                        #if DIM > 544
+                            float delta18 = (p18 - q18) * (p18 - q18);
+                        #endif
+                        #if DIM > 576
+                            float delta19 = (p19 - q19) * (p19 - q19);
+                        #endif
+                        #if DIM > 608
+                            float delta20 = (p20 - q20) * (p20 - q20);
+                        #endif
+                        #if DIM > 640
+                            float delta21 = (p21 - q21) * (p21 - q21);
+                        #endif
+                        #if DIM > 672
+                            float delta22 = (p22 - q22) * (p22 - q22);
+                        #endif
+                        #if DIM > 704
+                            float delta23 = (p23 - q23) * (p23 - q23);
+                        #endif
+                        #if DIM > 736
+                            float delta24 = (p24 - q24) * (p24 - q24);
+                        #endif
+                        #if DIM > 768
+                            float delta25 = (p25 - q25) * (p25 - q25);
+                        #endif
+                        #if DIM > 800
+                            float delta26 = (p26 - q26) * (p26 - q26);
+                        #endif
+                        #if DIM > 832
+                            float delta27 = (p27 - q27) * (p27 - q27);
+                        #endif
+                        #if DIM > 864
+                            float delta28 = (p28 - q28) * (p28 - q28);
+                        #endif
+                        #if DIM > 896
+                            float delta29 = (p29 - q29) * (p29 - q29);
+                        #endif
+                        #if DIM > 928
+                            float delta30 = (p30 - q30) * (p30 - q30);
+                        #endif
+                        #endif           
+                        #if USE_L2_DIST_
+                            float dist = 0;
+                        #if DIM > 0
+                            dist += delta1;
+                        #endif
+                        #if DIM > 32
+                            dist += delta2;
+                        #endif
+                        #if DIM > 64
+                            dist += delta3;
+                        #endif
+                        #if DIM > 96
+                            dist += delta4;
+                        #endif
+                        #if DIM > 128
+                            dist += delta5;
+                        #endif
+                        #if DIM > 160
+                            dist += delta6;
+                        #endif
+                        #if DIM > 192
+                            dist += delta7;
+                        #endif
+                        #if DIM > 224
+                            dist += delta8;
+                        #endif
+                        #if DIM > 256
+                            dist += delta9;
+                        #endif
+                        #if DIM > 288
+                            dist += delta10;
+                        #endif
+                        #if DIM > 320
+                            dist += delta11;
+                        #endif
+                        #if DIM > 352
+                            dist += delta12;
+                        #endif
+                        #if DIM > 384
+                            dist += delta13;
+                        #endif
+                        #if DIM > 416
+                            dist += delta14;
+                        #endif
+                        #if DIM > 448
+                            dist += delta15;
+                        #endif
+                        #if DIM > 480
+                            dist += delta16;
+                        #endif
+                        #if DIM > 512
+                            dist += delta17;
+                        #endif
+                        #if DIM > 544
+                            dist += delta18;
+                        #endif
+                        #if DIM > 576
+                            dist += delta19;
+                        #endif
+                        #if DIM > 608
+                            dist += delta20;
+                        #endif
+                        #if DIM > 640
+                            dist += delta21;
+                        #endif
+                        #if DIM > 672
+                            dist += delta22;
+                        #endif
+                        #if DIM > 704
+                            dist += delta23;
+                        #endif
+                        #if DIM > 736
+                            dist += delta24;
+                        #endif
+                        #if DIM > 768
+                            dist += delta25;
+                        #endif
+                        #if DIM > 800
+                            dist += delta26;
+                        #endif
+                        #if DIM > 832
+                            dist += delta27;
+                        #endif
+                        #if DIM > 864
+                            dist += delta28;
+                        #endif
+                        #if DIM > 896
+                            dist += delta29;
+                        #endif
+                        #if DIM > 928
+                            dist += delta30;
+                        #endif
+                        #endif
+                        #if USE_L2_DIST_
+                        dist += __shfl_down_sync(FULL_MASK, dist, 16);
+                        dist += __shfl_down_sync(FULL_MASK, dist, 8);
+                        dist += __shfl_down_sync(FULL_MASK, dist, 4);
+                        dist += __shfl_down_sync(FULL_MASK, dist, 2);
+                        dist += __shfl_down_sync(FULL_MASK, dist, 1);
+                        #endif
 
-                        final_neighbors_array[final_num_of_candidates + unrollt_id].first = MAX;
-                        final_neighbors_array[final_num_of_candidates + unrollt_id].second = total_num_of_points;
+                        #if USE_L2_DIST_
+                        //dist = sqrt(dist);
+                        #endif
+
+                        if (lane_id == 0) {
+                            final_neighbors_array[final_num_of_candidates + num_of_read].first = dist; 
+                            final_neighbors_array[final_num_of_candidates + num_of_read].second = first_position_of_flag + i;
+                            tmp_add(int(first_position_of_flag + i), random_number, block_data);
+                            // if(b_id == 0){
+                            //     printf("Point : %d, Dist: %f\n", first_position_of_flag, dist);
+                            // }
+                        }
+                        auto compute_precise_distance_end = clock64();
+                        if(lane_id == 0){
+                            crt_time_breakdown[1] += compute_precise_distance_end - compute_precise_distance_start;
+                        }
+                        
+                    
+                        
+                        num_of_read++;
+                        __syncthreads();
                     }
-                }
-                // num_of_read = 0;
-                __syncthreads();
-                sort_end = clock64();
-                if(lane_id == 0){
-                    crt_time_breakdown[3] += sort_end - sort_start;
-                }
-                
-                tmp_search_width++;
-                if(t_id == 0){
-                    tmp_add(int(block_id), random_number, block_data);
-                    // IO_count[b_id]++;
-                    // atomicAdd(num_of_block_accesses + block_id, 1);
-                }
-                __syncthreads();
-            }
-            // else{
-            //     neighbors_array[neighbor_loc].first = MAX;
-            // }
 
-            
-            if(tmp_search_width == search_width) break;
-            auto sort_start = clock64();
-            while(tmp_flag == 0 && iteration < (num_of_explored_points + size_of_warp - 1) / size_of_warp){
-                iteration++;
-                int unrollt_id = lane_id + size_of_warp * iteration;
-                crt_flag = 0;
-                if(unrollt_id < num_of_explored_points){
-                    if(neighbors_array[unrollt_id].second > 0 && neighbors_array[unrollt_id].second < total_num_of_points){
-                        crt_flag = 1;
-                    }else if(neighbors_array[unrollt_id].second == 0){
-                        if(check_zero == 0){
-                            check_zero = 1;
+                    
+                    tmp_search_width++;
+                    if(lane_id == 0){
+                        // tmp_add(int(block_id), random_number, block_data);
+                        // IO_count[b_id]++;
+                        // atomicAdd(num_of_block_accesses + block_id, 1);
+                    }
+                    __syncthreads();
+                }
+
+                
+                if(tmp_search_width == search_width) break;
+                auto sort_start = clock64();
+                while(tmp_flag == 0 && iteration < (num_of_explored_points + size_of_warp - 1) / size_of_warp){
+                    iteration++;
+                    int unrollt_id = lane_id + size_of_warp * iteration;
+                    crt_flag = 0;
+                    if(unrollt_id < num_of_explored_points){
+                        if(neighbors_array[unrollt_id].second > 0 && neighbors_array[unrollt_id].second < total_num_of_points){
                             crt_flag = 1;
+                        }else if(neighbors_array[unrollt_id].second == 0){
+                            if(check_zero == 0){
+                                check_zero = 1;
+                                crt_flag = 1;
+                            }
                         }
                     }
+                    tmp_flag = __ballot_sync(FULL_MASK, crt_flag);
                 }
-                tmp_flag = __ballot_sync(FULL_MASK, crt_flag);
-            }
-            auto sort_end = clock64();
-            if(lane_id == 0){
-                crt_time_breakdown[3] += sort_end - sort_start;
+                __syncthreads();
+                auto sort_end = clock64();
+                if(t_id == 0){
+                    crt_time_breakdown[3] += sort_end - sort_start;
+                }
             }
             
         }
-        __syncthreads();
         // auto load_neighbors_end = clock64();
         // if(t_id == 0){
         //     crt_time_breakdown[0] += load_neighbors_end - load_neighbors_start;
         // }
         if(tmp_search_width == 0) break;
-        //计算query与search_width * degree_of_point个点的邻居的距离
+        //计算query与beam_width * length_of_block * degree_of_point个点的邻居的距离
         auto compute_distance_start = clock64();
         for (int i = warp_id; i < tmp_search_width * degree_of_point * length_of_block; i += warp_size) {
             size_t target_point_id = size_t(neighbors_array[num_of_candidates + i].second);
@@ -1221,80 +1787,80 @@ __global__ void cagra_bam_pq_blocksearch(array_d_t<char>* d_data, float* d_query
         }
     }
     __syncthreads();
-    // if(num_of_read > 0){
-    //     auto sort_start = clock64();
-    //     step_id = 1;
-    //     substep_id = 1;
-    //     for (; step_id <= final_num_of_visited_points_one_batch / 2; step_id *= 2) {
-    //         substep_id = step_id;
+    if(num_of_read > 0){
+        auto sort_start = clock64();
+        step_id = 1;
+        substep_id = 1;
+        for (; step_id <= final_num_of_visited_points_one_batch / 2; step_id *= 2) {
+            substep_id = step_id;
 
-    //         for (; substep_id >= 1; substep_id /= 2) {
-    //             for (int temparory_id = 0; temparory_id < (final_num_of_visited_points_one_batch / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
-    //                 int unrollt_id = final_num_of_candidates + ((t_id + size_of_block * temparory_id) / substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+            for (; substep_id >= 1; substep_id /= 2) {
+                for (int temparory_id = 0; temparory_id < (final_num_of_visited_points_one_batch / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                    int unrollt_id = final_num_of_candidates + ((t_id + size_of_block * temparory_id) / substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
                     
-    //                 if (unrollt_id < final_num_of_candidates + final_num_of_visited_points_one_batch) {
-    //                     if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
-    //                         if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
-    //                             temporary_neighbor = final_neighbors_array[unrollt_id];
-    //                             final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-    //                             final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-    //                         }
-    //                     } else {
-    //                         if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
-    //                             temporary_neighbor = final_neighbors_array[unrollt_id];
-    //                             final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-    //                             final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         __syncthreads();
-    //     }
-    //     __syncthreads();
-    //     //将候选列表与邻居列表merge之后排序
+                    if (unrollt_id < final_num_of_candidates + final_num_of_visited_points_one_batch) {
+                        if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                            if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                            }
+                        } else {
+                            if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                                temporary_neighbor = final_neighbors_array[unrollt_id];
+                                final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                                final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                            }
+                        }
+                    }
+                }
+            }
+            __syncthreads();
+        }
+        __syncthreads();
+        //将候选列表与邻居列表merge之后排序
         
-    //     for (int temparory_id = 0; temparory_id < (final_length_of_compared_list + size_of_block - 1) / size_of_block; temparory_id++) {
-    //         int unrollt_id = final_num_of_candidates - final_length_of_compared_list + t_id + size_of_block * temparory_id;
-    //         if (unrollt_id < final_num_of_candidates) {
-    //             if(final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first == MAX) continue;
-    //             if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first) {
-    //                 temporary_neighbor = final_neighbors_array[unrollt_id];
-    //                 final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch];
-    //                 final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch] = temporary_neighbor;
-    //             }
-    //         }
-    //     }
-    //     __syncthreads();
-    //     step_id = final_num_of_candidates / 2;
-    //     substep_id = final_num_of_candidates / 2;
-    //     for (; substep_id >= 1; substep_id /= 2) {
-    //         for (int temparory_id = 0; temparory_id < (final_num_of_candidates / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
-    //             int unrollt_id = ((t_id + size_of_block * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
-    //             if (unrollt_id < final_num_of_candidates) {
-    //                 if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
-    //                     if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
-    //                         temporary_neighbor = final_neighbors_array[unrollt_id];
-    //                         final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-    //                         final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-    //                     }
-    //                 } else {
-    //                     if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
-    //                         temporary_neighbor = final_neighbors_array[unrollt_id];
-    //                         final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
-    //                         final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         __syncthreads();
-    //     }
-    //     __syncthreads();
-    //     auto sort_end = clock64();
-    //     if(lane_id == 0){
-    //         crt_time_breakdown[3] += sort_end - sort_start;
-    //     }
-    // }
+        for (int temparory_id = 0; temparory_id < (final_length_of_compared_list + size_of_block - 1) / size_of_block; temparory_id++) {
+            int unrollt_id = final_num_of_candidates - final_length_of_compared_list + t_id + size_of_block * temparory_id;
+            if (unrollt_id < final_num_of_candidates) {
+                if(final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first == MAX) continue;
+                if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch].first) {
+                    temporary_neighbor = final_neighbors_array[unrollt_id];
+                    final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch];
+                    final_neighbors_array[unrollt_id + final_num_of_visited_points_one_batch] = temporary_neighbor;
+                }
+            }
+        }
+        __syncthreads();
+        step_id = final_num_of_candidates / 2;
+        substep_id = final_num_of_candidates / 2;
+        for (; substep_id >= 1; substep_id /= 2) {
+            for (int temparory_id = 0; temparory_id < (final_num_of_candidates / 2 + size_of_block - 1) / size_of_block; temparory_id++) {
+                int unrollt_id = ((t_id + size_of_block * temparory_id)/ substep_id) * 2 * substep_id + ((t_id + size_of_block * temparory_id) & (substep_id - 1));
+                if (unrollt_id < final_num_of_candidates) {
+                    if (((t_id + size_of_block * temparory_id) / step_id) % 2 == 0) {
+                        if (final_neighbors_array[unrollt_id].first > final_neighbors_array[unrollt_id + substep_id].first) {
+                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                        }
+                    } else {
+                        if (final_neighbors_array[unrollt_id].first < final_neighbors_array[unrollt_id + substep_id].first) {
+                            temporary_neighbor = final_neighbors_array[unrollt_id];
+                            final_neighbors_array[unrollt_id] = final_neighbors_array[unrollt_id + substep_id];
+                            final_neighbors_array[unrollt_id + substep_id] = temporary_neighbor;
+                        }
+                    }
+                }
+            }
+            __syncthreads();
+        }
+        __syncthreads();
+        auto sort_end = clock64();
+        if(t_id == 0){
+            crt_time_breakdown[3] += sort_end - sort_start;
+        }
+    }
     
     // if(b_id == 0 && t_id == 0){
     //     for(int i = 0; i < num_of_results; i++){

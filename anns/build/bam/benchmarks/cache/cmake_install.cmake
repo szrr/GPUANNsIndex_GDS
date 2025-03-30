@@ -1,4 +1,4 @@
-# Install script for directory: /home/ErHa/GPUANNsIndex_GDS11.28/anns/bam/benchmarks/cache
+# Install script for directory: /home/szr/package/GPUANNsIndex_GDS11.28/anns/bam/benchmarks/cache
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -42,3 +42,9 @@ if(NOT DEFINED CMAKE_OBJDUMP)
   set(CMAKE_OBJDUMP "/usr/bin/objdump")
 endif()
 
+string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
+       "${CMAKE_INSTALL_MANIFEST_FILES}")
+if(CMAKE_INSTALL_LOCAL_ONLY)
+  file(WRITE "/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/cache/install_local_manifest.txt"
+     "${CMAKE_INSTALL_MANIFEST_CONTENT}")
+endif()

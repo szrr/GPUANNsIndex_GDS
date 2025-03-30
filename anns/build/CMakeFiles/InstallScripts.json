@@ -1,0 +1,20 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/array/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/iodepth-block/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/block/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/readwrite/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/bfs/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/cc/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/pagerank/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/sssp/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/sssp_float/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/pattern/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/cache/cmake_install.cmake",
+		"/home/szr/package/GPUANNsIndex_GDS11.28/anns/build/bam/benchmarks/vectoradd/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

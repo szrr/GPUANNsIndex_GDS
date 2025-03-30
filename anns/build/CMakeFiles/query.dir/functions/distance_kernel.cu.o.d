@@ -1,4 +1,4 @@
-CMakeFiles/query.dir/functions/distance_kernel.cu.o : /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/distance_kernel.cu \
+CMakeFiles/query.dir/functions/distance_kernel.cu.o : /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/distance_kernel.cu \
     /usr/include/stdc-predef.h \
     /usr/local/cuda-12.3/include/cuda_runtime.h \
     /usr/local/cuda-12.3/include/crt/host_config.h \
@@ -153,9 +153,9 @@ CMakeFiles/query.dir/functions/distance_kernel.cu.o : /home/ErHa/GPUANNsIndex_GD
     /usr/include/c++/11/bits/move.h \
     /usr/include/c++/11/type_traits \
     /usr/include/c++/11/initializer_list \
-    /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/check.h \
-    /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/distance_kernel.cuh \
-    /home/ErHa/GPUANNsIndex_GDS11.28/anns/functions/../common.h \
+    /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/check.h \
+    /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/distance_kernel.cuh \
+    /home/szr/package/GPUANNsIndex_GDS11.28/anns/functions/../common.h \
     /usr/include/c++/11/chrono \
     /usr/include/c++/11/ratio \
     /usr/include/c++/11/cstdint \
